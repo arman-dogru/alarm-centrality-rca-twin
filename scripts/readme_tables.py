@@ -77,8 +77,8 @@ if __name__ == "__main__":
     if "--write" in sys.argv:
         txt = open("README.md").read()
         for name, fn in BLOCKS.items():
-            txt, k = re.subn(rf"(<!-- BEGIN:{name} -->\n).*?(\n<!-- END:{name} -->)",
-                             lambda mm: mm.group(1) + fn() + mm.group(2), txt, flags=re.S)
+            txt, k = re.subn(rf"(<!-- BEGIN:{name} -->\n).*?(<!-- END:{name} -->)",
+                             lambda mm: mm.group(1) + fn() + "\n" + mm.group(2), txt, flags=re.S)
             assert k == 1, name
         open("README.md", "w").write(txt)
     else:

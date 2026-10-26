@@ -1,11 +1,23 @@
 {
- "killed": 23,
- "total": 23,
+ "killed": 25,
+ "total": 25,
  "mutants": [
   {
    "file": "rcatwin/rca.py",
-   "mutant": "return int((s > r).sum() + 1)",
-   "breaks": "optimistic ties",
+   "mutant": "(1 if optimistic else 1)",
+   "breaks": "pessimistic rank breaks ties for the root",
+   "killed": true
+  },
+  {
+   "file": "rcatwin/rca.py",
+   "mutant": "((s == r).sum() if optimistic else (s == r).sum())",
+   "breaks": "optimistic rank counts ties against the root",
+   "killed": true
+  },
+  {
+   "file": "rcatwin/rca.py",
+   "mutant": "return (np.asarray(pess) == 1) / (np.asarray(pess) - np.asarray(opt) + 1.0)",
+   "breaks": "ties-split Top-1 uses the pessimistic rank",
    "killed": true
   },
   {
