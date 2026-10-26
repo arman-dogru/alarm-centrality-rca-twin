@@ -29,7 +29,44 @@ M = [  # (file, original, mutant, what it breaks)
     ("rcatwin/stats.py", "np.abs(null) >= abs(obs) - 1e-12", "null >= obs - 1e-12", "one-sided sign-flip"),
     ("rcatwin/stats.py", "run = max(run, min(1.0, (k - r) * p[i]))", "run = min(1.0, (k - r) * p[i])", "Holm not monotone"),
     ("rcatwin/triage.py", '"cycle_rank": (m - n + comps) / max(1, n)', '"cycle_rank": (m - n) / max(1, n)', "cycle rank ignores components"),
-    ("rcatwin/triage.py", "    if f[\"hub_share\"] >= hub_share_min:\n        return \"star\"", "    if f[\"hub_share\"] >= hub_share_min:\n        return \"mesh\"", "star rule returns mesh"),
+    ("rcatwin/triage.py", 'np.where(cyc >= cycle_mesh_min, "mesh", np.where(cv >= deg_cv_star_min, "star", "hierarchical"))', 'np.where(cyc >= cycle_mesh_min, "star", np.where(cv >= deg_cv_star_min, "mesh", "hierarchical"))', "pipeline triage rule swaps mesh/star"),
+    # --- round-1 review: the reviewer's surviving mutants (probes/extra_mutants.py), adapted to the current code ---
+    ("rcatwin/rca.py", "deg = M @ is_alarm + 0.5 * is_alarm", "deg = M @ is_alarm + 0.0 * is_alarm", "alarm-degree drops the self-alarm term"),
+    ("rcatwin/rca.py", "deg = M @ is_alarm + 0.5 * is_alarm", "deg = M @ is_alarm + 5.0 * is_alarm", "self-alarm dominates alarm-degree"),
+    ("rcatwin/rca.py", "D[np.isinf(D)] = len(nodes)\n        close", "D[np.isinf(D)] = 0\n        close", "alarm-closeness: unreachable alarms at distance 0"),
+    ("rcatwin/rca.py", "comms = sorted(comms, key=lambda m: (-len(m & Aset), -len(m), min(m)))", "comms = sorted(comms, key=lambda m: (len(m & Aset), -len(m), min(m)))", "Louvain keeps the least-alarmed communities first"),
+    ("rcatwin/rca.py", "out[nodes] = (rankdata(v) - 1) / max(1, len(v) - 1)", "out[nodes] = (rankdata(v, method='ordinal') - 1) / max(1, len(v) - 1)", "percentile ties broken by node index"),
+    ("rcatwin/rca.py", '    key = G.graph.get("twin_id")', "    key = id(G)", "global PR cache keyed by id(G) (review m4)"),
+    ("rcatwin/stats.py", "def ci(boot, lo=2.5, hi=97.5):", "def ci(boot, lo=10, hi=90):", "CI is 80% not 95%"),
+    ("rcatwin/stats.py", "return (np.asarray(X, np.float64) @ W.T.astype(np.float64)) / W.sum(1)", "return (np.asarray(X, np.float64) @ W.T.astype(np.float64)) / W.shape[1]", "bootstrap mean divides by N"),
+    ("rcatwin/stats.py", "return float((np.sum(np.abs(null) >= abs(obs) - 1e-12) + 1) / (flips + 1))", "return float(np.sum(np.abs(null) >= abs(obs) - 1e-12) / flips)", "sign-flip p can be 0"),
+    ("rcatwin/stats.py", "for k in rng.integers(0, len(members), len(members)):", "for k in range(len(members)):", "bootstrap never resamples clusters"),
+    ("rcatwin/stats.py", "        groups.append([np.flatnonzero((clusters == c) & (strata == s)) for c in ids])", "        groups.append([np.flatnonzero(clusters == c) for c in np.unique(clusters)])", "stratified bootstrap ignores strata"),
+    ("rcatwin/stats.py", "    m = twin_means(d, clusters)\n    if not np.any(m):", "    m = np.asarray(d, float)\n    if not np.any(m):", "twin-level test runs on incidents"),
+    ("rcatwin/stats.py", "    return float(_st.ttest_1samp(m, 0.0).pvalue)", "    return float(_st.ttest_1samp(np.asarray(d, float), 0.0).pvalue)", "twin t-test runs on incidents"),
+    ("rcatwin/faults.py", "if rng.random() < P.p_link and", "if rng.random() < 1.0 and", "p_link ignored"),
+    ("rcatwin/faults.py", '(P.link_model == "all" or L0[u] < L0[root])', '(P.link_model == "all" or L0[u] <= L0[root])', "upstream model admits same-layer peers"),
+    ("rcatwin/faults.py", 'emit(int(v), float(rng.uniform(-60, 300)), "SPURIOUS")', 'emit(int(v), float(rng.uniform(0, 300)), "SPURIOUS")', "no pre-fault spurious alarms"),
+    ("rcatwin/faults.py", "deg = {v for v in others if v in L1 and L1[v] > L0[v]}", "deg = {v for v in others if v in L1 and L1[v] >= L0[v]}", "every reachable node is degraded"),
+    ("rcatwin/faults.py", "if rng.random() < P.p_degrade:", "if rng.random() < 1.0:", "p_degrade ignored"),
+    ("rcatwin/faults.py", "rng.poisson(P.noise * max(1, len(true)))", "rng.poisson(P.noise * max(1, len(true)) * 3)", "3x spurious rate"),
+    ("rcatwin/faults.py", "if len(set(G.neighbors(v)) | disc) >= min_blast:", "if len(set(G.neighbors(v)) | disc) >= min_blast - 1:", "eligible-root threshold off by one"),
+    ("rcatwin/faults.py", "            hops = max(1, L0[v] - L0[root])", "            hops = 1", "UNREACHABLE delay ignores depth"),
+    ("rcatwin/experiment.py", 'S["alarm_degree_tb"] = tr["alarm_degree"] + 1e-3 * rca.pct(tr["alarm_closeness"], nodes)', 'S["alarm_degree_tb"] = tr["alarm_degree"] + 1e3 * rca.pct(tr["alarm_closeness"], nodes)', "tie-break dominates alarm-degree"),
+    ("rcatwin/experiment.py", '        out[f"rank:{k}"] = rca.rank_of(s, root)', '        out[f"rank:{k}"] = rca.rank_of(s, root, optimistic=True)', "headline rank becomes optimistic"),
+    ("rcatwin/experiment.py", "    top = int(np.argmax(s))\n    return top if", "    top = int(np.argmin(s))\n    return top if", "autonomy gate top-1 is the worst node"),
+    ("rcatwin/experiment.py", "    return top if int((s == s[top]).sum()) == 1 else None", "    return top", "gate agreement counts tied tops"),
+    ("rcatwin/triage.py", "WEIGHTS = {lab: {k: (0.6 if k == SELECT[lab] else 0.2) for k in SELECT.values()} for lab in LABELS}", "WEIGHTS = {lab: {k: (0.2 if k == SELECT[lab] else 0.4) for k in SELECT.values()} for lab in LABELS}", "blog-reading weights inverted"),
+    ("rcatwin/triage.py", 'SELECT = {"hierarchical": "ppr", "star": "alarm_degree", "mesh": "alarm_closeness"}', 'SELECT = {"hierarchical": "alarm_closeness", "star": "alarm_degree", "mesh": "ppr"}', "blog-reading mapping swapped"),
+    ("scripts/aggregate.py", "best = df[trio_r].to_numpy().argmin(1)", "best = df[trio_r].to_numpy().argmax(1)", "oracle picks the worst trio member"),
+    ("scripts/aggregate.py", '    cal, tree = calibrate(load(raw, "dev"))', '    cal, tree = calibrate(load(raw, "main"))', "calibration on eval twins"),
+    ("scripts/aggregate.py", "    if not set(dev.seed.unique()) <= set(DEV_SEEDS):", "    if False:", "calibration accepts eval seeds"),
+    ("scripts/aggregate.py", '    return bool(c["p_holm"] < 0.05 and (c["lo"] > 0 or c["hi"] < 0))', '    return bool(c["p_holm"] < 0.05)', "significance ignores the CI"),
+    ("scripts/aggregate.py", '    for c, ph in zip(comps, holm([c["p"] for c in comps])):', '    for c, ph in zip(comps, [c["p"] for c in comps]):', "no Holm correction"),
+    ("scripts/aggregate.py", '                              "p": twin_signflip_p(d, twin, FLIPS, rng), "p_t": twin_t_p(d, twin),', '                              "p": signflip_p(d, 5000, rng), "p_t": twin_t_p(d, twin),', "primary test back to incident level"),
+    ("scripts/aggregate.py", '        df[f"{pre}:triage_blog_select"] = pick(df.triage_rule, lambda l: SELECT[l])', '        df[f"{pre}:triage_blog_select"] = pick(df.triage_rule, lambda l: "equal")', "blog select uses equal weights"),
+    ("scripts/aggregate.py", '        df[f"{pre}:triage_dev_select"] = pick(df.triage_rule, lambda l: cal["dev_best_member"][l]["chosen"])', '        df[f"{pre}:triage_dev_select"] = pick(df.triage_rule, lambda l: SELECT[l])', "dev-tuned select uses the blog mapping"),
+    ("scripts/aggregate.py", "        W = cluster_weights(twin, B, rng, strata=g.kind.to_numpy())", "        W = cluster_weights(np.arange(len(g)), B, rng)", "bootstrap ignores twins"),
 ]
 
 
@@ -38,7 +75,7 @@ def main():
     for f, old, new, what in M:
         tmp = tempfile.mkdtemp(prefix="mut_")
         try:
-            for d in ("rcatwin", "tests"):
+            for d in ("rcatwin", "tests", "scripts"):
                 shutil.copytree(os.path.join(ROOT, d), os.path.join(tmp, d), ignore=shutil.ignore_patterns("__pycache__"))
             p = os.path.join(tmp, f); src = open(p).read()
             assert src.count(old) == 1, f"{f}: mutation site not unique/found: {old}"

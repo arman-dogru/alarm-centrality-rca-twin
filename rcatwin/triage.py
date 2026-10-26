@@ -13,8 +13,9 @@ import numpy as np
 import networkx as nx
 
 LABELS = ("hierarchical", "star", "mesh")
-# which trio member each topology emphasises (Amazon Science post: PPR -> common ancestors in hierarchies,
-# alarm-degree -> star hubs, alarm-closeness -> peripheral failures in meshes)
+# Which trio member each topology emphasises. This is MY operationalisation of the Amazon Science post
+# (https://www.amazon.science/blog/graph-centric-agentic-intelligence): the post says the agent selects the
+# algorithm combination according to topology; the hard label -> member mapping and the 0.6/0.2 weights are my choice.
 SELECT = {"hierarchical": "ppr", "star": "alarm_degree", "mesh": "alarm_closeness"}
 WEIGHTS = {lab: {k: (0.6 if k == SELECT[lab] else 0.2) for k in SELECT.values()} for lab in LABELS}
 EQUAL = {k: 1 / 3 for k in SELECT.values()}
@@ -38,13 +39,11 @@ def features(G, nodes):
             "deg_cv": float(deg.std() / max(1e-9, deg.mean())), "clustering": float(nx.average_clustering(H)) if n else 0.0}
 
 
-def classify(f, hub_share_min=0.5, cycle_mesh_min=0.15):
-    """Rules (thresholds fixed on the dev seeds, see scripts/calibrate_triage.py)."""
-    if f["hub_share"] >= hub_share_min:
-        return "star"
-    if f["cycle_rank"] >= cycle_mesh_min:
-        return "mesh"
-    return "hierarchical"
+def classify(cycle_rank, deg_cv, cycle_mesh_min, deg_cv_star_min):
+    """The triage rule used by the pipeline (vectorised): cycle-rich -> mesh, else very uneven degrees -> star, else
+    hierarchical. Thresholds are grid-searched on the dev twins only (scripts/aggregate.py: calibrate)."""
+    cyc, cv = np.asarray(cycle_rank, float), np.asarray(deg_cv, float)
+    return np.where(cyc >= cycle_mesh_min, "mesh", np.where(cv >= deg_cv_star_min, "star", "hierarchical"))
 
 
 def true_label(G, root):

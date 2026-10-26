@@ -2,9 +2,10 @@
 
 Usage: python scripts/readme_tables.py [--write]   (--write replaces the <!-- BEGIN:x --> ... <!-- END:x --> blocks)
 """
-import json, re, sys
+import json, os, re, sys
 
-S = json.load(open("results/summary.json"))
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+S = json.load(open(os.path.join(ROOT, "results", "summary.json")))
 M = S["phases"]["main"]
 KINDS = ["hierarchical", "star", "mesh", "hybrid"]
 NAMES = {"random_candidate": "random candidate in cascade", "global_pagerank": "global PageRank (no cascade)",
@@ -46,18 +47,43 @@ def ties():
     return "\n".join(rows)
 
 
+def _p(x):
+    return "<0.001" if x < 1e-3 else f"{x:.3f}"
+
+
+def _crow(label, c):
+    name = f"{NAMES[c['a']].strip('*')} vs {NAMES[c['b']].strip('*')}"
+    ci_ = f"[{100 * c['lo']:+.1f}, {100 * c['hi']:+.1f}]"
+    tw = f"{c['twins_pos']}/{c['twins_neg']}"
+    if c["planned"] and "p_holm" in c:
+        return (f"| {label} | {name} | {100 * c['diff']:+.1f} | {ci_} | {tw} | {_p(c['p_holm'])} | {_p(c['p_t'])} | "
+                f"{'**yes**' if c['significant'] else 'no'} |")
+    return f"| {label} | {name} *(exploratory)* | {100 * c['diff']:+.1f} | {ci_} | {tw} | unadjusted {_p(c['p'])} | {_p(c['p_t'])} | n/a |"
+
+
+HDR = ["| topology | comparison (A vs B) | Top-1 A - B (pp) | 95% CI | twins +/- | twin sign-flip p, Holm | twin t-test p (raw) | significant |",
+       "|---|---|---|---|---|---|---|---|"]
+
+
 def comps():
-    rows = ["| topology | comparison (A vs B) | Top-1 A - B (pp) | 95% CI | Holm p | significant |", "|---|---|---|---|---|---|"]
-    for k in KINDS:
-        for c in M[k]["comparisons"]:
-            name = f"{NAMES[c['a']].strip('*')} vs {NAMES[c['b']].strip('*')}"
-            if c["planned"]:
-                ph = c["p_holm"]
-                rows.append(f"| {k} | {name} | {100 * c['diff']:+.1f} | [{100 * c['lo']:+.1f}, {100 * c['hi']:+.1f}] | "
-                            f"{'<0.001' if ph < 1e-3 else f'{ph:.3f}'} | {'yes' if c['significant'] else 'no'} |")
-            else:
-                rows.append(f"| {k} | {name} *(exploratory)* | {100 * c['diff']:+.1f} | [{100 * c['lo']:+.1f}, {100 * c['hi']:+.1f}] | "
-                            f"unadjusted {c['p']:.3g} | n/a |")
+    return "\n".join(HDR + [_crow(k, c) for k in KINDS for c in M[k]["comparisons"]])
+
+
+def pooled():
+    return "\n".join(HDR + [_crow("all (pooled)", c) for c in M["all"]["comparisons"]])
+
+
+def plink():
+    PL = S["phases"]["plink"]
+    ms = ["alarm_degree", "alarm_closeness", "ppr", "equal", "common_ancestor", "earliest_in_cascade", "triage_dev_select"]
+    rows = ["| topology | p_link | " + " | ".join(NAMES[m].strip("*") for m in ms) + " | alarm-degree - equal (pp) [95% CI], twins +/- |",
+            "|---|---|" + "---|" * (len(ms) + 1)]
+    for k in KINDS + ["all"]:
+        for lab, key in [(f"{p:g}", f"{k}|p_link={p:g}|model=all") for p in (0.3, 0.5, 0.7, 0.9)] + [("0.9 upstream-only", f"{k}|p_link=0.9|model=upstream")]:
+            g = PL[key]
+            c = next(c for c in g["comparisons"] if c["a"] == "alarm_degree" and c["b"] == "equal")
+            rows.append(f"| {k} | {lab} | " + " | ".join(f(g["methods"][m]["top1"]["mean"]) for m in ms)
+                        + f" | {100 * c['diff']:+.1f} [{100 * c['lo']:+.1f}, {100 * c['hi']:+.1f}], {c['twins_pos']}/{c['twins_neg']} |")
     return "\n".join(rows)
 
 
@@ -71,16 +97,16 @@ def ablate():
     return "\n".join(rows)
 
 
-BLOCKS = {"headline": headline, "ties": ties, "comparisons": comps, "ablate": ablate}
+BLOCKS = {"headline": headline, "ties": ties, "comparisons": comps, "pooled": pooled, "plink": plink, "ablate": ablate}
 
 if __name__ == "__main__":
     if "--write" in sys.argv:
-        txt = open("README.md").read()
+        txt = open(os.path.join(ROOT, "README.md")).read()
         for name, fn in BLOCKS.items():
             txt, k = re.subn(rf"(<!-- BEGIN:{name} -->\n).*?(<!-- END:{name} -->)",
                              lambda mm: mm.group(1) + fn() + "\n" + mm.group(2), txt, flags=re.S)
             assert k == 1, name
-        open("README.md", "w").write(txt)
+        open(os.path.join(ROOT, "README.md"), "w").write(txt)
     else:
         for name, fn in BLOCKS.items():
             print(f"## {name}\n{fn()}\n")

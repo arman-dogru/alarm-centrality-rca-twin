@@ -6,7 +6,9 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, ROOT)
+os.chdir(ROOT)  # every path below is relative to the repo root, wherever the script is run from
 from rcatwin import rca, triage
 from rcatwin.faults import FaultParams, eligible_roots, simulate
 from rcatwin.twin import make_twin
@@ -53,9 +55,9 @@ for ax, k in zip(axes, KINDS):
 axes[0].set_yticks(y, [NAMES[m] for m in meths]); axes[0].invert_yaxis()
 for g, c in COL.items():
     axes[-1].plot([], [], "o", color=c, label=g)
-axes[-1].legend(loc="lower right", fontsize=8)
-fig.suptitle("Top-1 accuracy over the main grid (4 noise levels x 3 silent-root rates), 95% twin x incident bootstrap CI; ties count against the root; * exploratory")
-save(fig, "top1_by_method")
+fig.legend(*axes[-1].get_legend_handles_labels(), loc="lower center", ncol=4, fontsize=8, frameon=False)
+fig.suptitle("Top-1 accuracy over the main grid (4 noise levels x 3 silent-root rates), 95% twin-clustered bootstrap CI; ties count against the root; * exploratory")
+fig.tight_layout(rect=(0, 0.05, 1, 1)); fig.savefig(f"{FIG}/top1_by_method.png", dpi=120); plt.close(fig); print("top1_by_method")
 
 # 2. robustness: Top-1 vs noise and vs silent-root rate ----------------------------------------------
 LINES = ["earliest_in_cascade", "common_ancestor", "static_closeness", "ppr", "alarm_degree", "alarm_closeness", "equal", "triage_dev_select"]
@@ -86,7 +88,7 @@ axes[0].set_yscale("log"); axes[0].set_xticks(x, KINDS); axes[0].set_ylabel("can
 axes[0].axhline(1000, color="k", ls=":", lw=0.8); axes[0].text(3.4, 1050, "twin size", fontsize=7, ha="right")
 axes[0].legend(fontsize=7); axes[0].set_title("cascade narrows the search space")
 ret = [100 * inc[inc.kind == k]["root_in_s2"].mean() for k in KINDS]
-axes[0].text(-0.45, 1.6, "root kept after stage 2: " + ", ".join(f"{k[:4]} {r:.1f}%" for k, r in zip(KINDS, ret)), fontsize=7)
+axes[0].set_xlabel("root kept after stage 2: " + ", ".join(f"{k} {r:.1f}%" for k, r in zip(KINDS, ret)), fontsize=7)
 if "ablate" in S["phases"]:
     A = S["phases"]["ablate"]
     vars_ = [("", "full cascade"), ("@no_cluster", "no clustering"), ("@no_decompose", "no decomposition/clustering"),
@@ -197,10 +199,14 @@ for ax, k in zip(axes, KINDS):
     cs = [c for c in main[k]["comparisons"] if c["planned"]]
     for yi, c in enumerate(cs):
         col = ("#2ca02c" if c["diff"] > 0 else "#d62728") if c["significant"] else "#555555"
-        ax.errorbar(100 * c["diff"], yi, xerr=[[100 * (c["diff"] - c["lo"])], [100 * (c["hi"] - c["diff"])]], fmt="o", color=col, capsize=2, ms=4)
-    ax.axvline(0, color="k", lw=0.8); ax.set_title(k); ax.set_xlabel("Top-1 difference (pp)")
+        ax.errorbar(100 * c["diff"], yi, xerr=[[100 * (c["diff"] - c["lo"])], [100 * (c["hi"] - c["diff"])]], fmt="o", color=col, capsize=2, ms=4,
+                    mfc=col if c["significant"] else "white")
+        ax.annotate(f"{c['twins_pos']}+/{c['twins_neg']}-", (100 * c["hi"], yi), xytext=(4, -3), textcoords="offset points", fontsize=6, color="#444")
+    ax.axvline(0, color="k", lw=0.8); ax.set_title(f"{k} ({main[k]['twins']} twins)"); ax.set_xlabel("Top-1 difference (pp)")
+    ax.margins(x=0.15)
 axes[0].set_yticks(range(len(cs)), [f"{NAMES[c['a']]}  vs  {NAMES[c['b']]}" for c in cs], fontsize=7); axes[0].invert_yaxis()
-fig.suptitle("planned paired comparisons (95% CI; coloured = Holm p < 0.05 AND CI excludes 0)", fontsize=9)
+fig.suptitle("planned paired comparisons: 95% twin-clustered bootstrap CI; filled = twin-level sign-flip, Holm (40 tests) p < 0.05 AND CI excludes 0; "
+             "labels = #twins with positive / negative mean difference", fontsize=9)
 save(fig, "comparisons_forest")
 
 # 9. topology gallery + a worked incident -------------------------------------------------------------
@@ -217,29 +223,84 @@ for ax, k in zip(axes, KINDS):
     ax.set_title(f"{k} (160-node example; big = gateway)"); ax.axis("off")
 save(fig, "topologies")
 
+def worked(G, root, P, rng, fname, what):
+    incd = simulate(G, root, P, rng)
+    ctx = rca.context(G, incd)
+    nodes, st = rca.cascade(ctx, seed=3)
+    tr = rca.trio(ctx, nodes)
+    H = G.subgraph(rca.neighbourhood(G, nodes, 1))
+    pos = nx.kamada_kawai_layout(H)
+    fig, axes = plt.subplots(1, 3, figsize=(16, 5))
+    for ax, (key, title) in zip(axes, (("alarm_degree", "alarm-degree"), ("alarm_closeness", "alarm-closeness"), ("ppr", "alarm-seeded PPR"))):
+        s = tr[key]
+        vals = np.array([s[v] if np.isfinite(s[v]) else np.nan for v in H])
+        nx.draw_networkx_edges(H, pos, ax=ax, alpha=0.3)
+        sc = ax.scatter([pos[v][0] for v in H], [pos[v][1] for v in H], c=vals, cmap="viridis", s=30, zorder=2)
+        al = [v for v in H if v in incd.alarms]
+        ax.scatter([pos[v][0] for v in al], [pos[v][1] for v in al], facecolors="none", edgecolors="r", s=80, lw=1.2, zorder=3, label="alarming")
+        ax.scatter([pos[root][0]], [pos[root][1]], marker="*", s=300, c="gold", edgecolors="k", zorder=4,
+                   label="true root" + (" (silent)" if root not in incd.alarms else " (alarming)"))
+        best = max(s[v] for v in H if np.isfinite(s[v]))
+        tops = [v for v in H if s[v] == best]
+        ax.scatter([pos[v][0] for v in tops], [pos[v][1] for v in tops], marker="s", s=120, facecolors="none", edgecolors="k", lw=1.5, zorder=4,
+                   label=f"top score ({len(tops)} tied); root rank {rca.rank_of(s, root)} (ties count against it)")
+        plt.colorbar(sc, ax=ax, shrink=0.7); ax.set_title(title); ax.axis("off"); ax.legend(fontsize=7, loc="lower left")
+    fig.suptitle(f"worked incident: {what}, {len(incd.alarms)} alarms ({sum(k == 'SPURIOUS' for k in incd.kinds.values())} spurious); "
+                 f"candidates {st['s0']} -> {st['s1']} -> {st['s2']}", fontsize=9)
+    save(fig, fname)
+    return {k: rca.rank_of(tr[k], root) for k in tr}
+
+
 G = make_twin("hybrid", 400, 3)
-rng = np.random.default_rng(11)
 roots = [v for v in eligible_roots(G) if G.nodes[v]["tier"] == "hub"]
-root = roots[0]
-incd = simulate(G, root, FaultParams(p_silent=1.0, noise=0.5), rng)
-ctx = rca.context(G, incd)
-nodes, st = rca.cascade(ctx, seed=3)
-tr = rca.trio(ctx, nodes)
-eq = rca.weighted(tr, nodes, triage.EQUAL)
-H = G.subgraph(rca.neighbourhood(G, nodes, 1))
-pos = nx.kamada_kawai_layout(H)
-fig, axes = plt.subplots(1, 3, figsize=(16, 5))
-for ax, (key, title) in zip(axes, (("alarm_degree", "alarm-degree"), ("alarm_closeness", "alarm-closeness"), ("ppr", "alarm-seeded PPR"))):
-    s = tr[key]
-    vals = np.array([s[v] if np.isfinite(s[v]) else np.nan for v in H])
-    nx.draw_networkx_edges(H, pos, ax=ax, alpha=0.3)
-    sc = ax.scatter([pos[v][0] for v in H], [pos[v][1] for v in H], c=vals, cmap="viridis", s=30, zorder=2)
-    al = [v for v in H if v in incd.alarms]
-    ax.scatter([pos[v][0] for v in al], [pos[v][1] for v in al], facecolors="none", edgecolors="r", s=80, lw=1.2, zorder=3, label="alarming")
-    ax.scatter([pos[root][0]], [pos[root][1]], marker="*", s=300, c="gold", edgecolors="k", zorder=4, label="true root (silent)")
-    top = max((v for v in H if np.isfinite(s[v])), key=lambda v: s[v])
-    ax.scatter([pos[top][0]], [pos[top][1]], marker="s", s=120, facecolors="none", edgecolors="k", lw=1.5, zorder=4, label=f"top-1 (rank of root: {rca.rank_of(s, root)})")
-    plt.colorbar(sc, ax=ax, shrink=0.7); ax.set_title(title); ax.axis("off"); ax.legend(fontsize=7, loc="lower left")
-fig.suptitle(f"worked incident: hybrid twin, silent star hub fails, {len(incd.alarms)} alarms ({sum(k == 'SPURIOUS' for k in incd.kinds.values())} spurious); "
-             f"candidates {st['s0']} -> {st['s1']} -> {st['s2']}", fontsize=9)
-save(fig, "worked_incident")
+worked(G, roots[0], FaultParams(p_silent=1.0, noise=0.5), np.random.default_rng(11), "worked_incident", "hybrid twin, silent star hub fails (an easy case)")
+# a typical *hard* case (review n3): an alarming mesh root where alarm-degree does not rank the root first.
+# Deterministic search: the first (root index, rng seed) on this twin whose alarm-degree rank is > 1.
+G = make_twin("mesh", 400, 3)
+er = eligible_roots(G)
+for i in range(200):
+    r_, seed_ = er[(7 * i) % len(er)], 100 + i
+    inc_ = simulate(G, r_, FaultParams(p_silent=0.0, noise=0.25), np.random.default_rng(seed_))
+    c_ = rca.context(G, inc_); nd_, _ = rca.cascade(c_, seed=3)
+    if r_ in nd_ and rca.rank_of(rca.trio(c_, nd_)["alarm_degree"], r_) > 1:
+        break
+worked(G, r_, FaultParams(p_silent=0.0, noise=0.25), np.random.default_rng(seed_), "worked_incident_mesh",
+       "mesh twin, alarming root (a hard case: neighbours tie or beat the root on alarm-degree)")
+
+# 10. p_link sensitivity (review M1) -------------------------------------------------------------------
+if "plink" in S["phases"]:
+    PL = S["phases"]["plink"]
+    LM = [("alarm_degree", "#1f77b4"), ("alarm_closeness", "#8c564b"), ("ppr", "#d62728"), ("equal", "#9467bd"),
+          ("common_ancestor", "#7f7f7f"), ("earliest_in_cascade", "#e377c2"), ("triage_dev_select", "#bcbd22")]
+    fig, axes = plt.subplots(2, 4, figsize=(16, 7.5), sharey="row")
+    for j, k in enumerate(KINDS):
+        keys = sorted([g for g in PL if g.startswith(f"{k}|p_link=") and g.endswith("|model=all")], key=lambda g: float(g.split("|")[1][7:]))
+        xs = [float(g.split("|")[1][7:]) for g in keys]
+        up = f"{k}|p_link=0.9|model=upstream"
+        ax = axes[0, j]
+        for m, c in LM:
+            v = [PL[g]["methods"][m]["top1"] for g in keys]
+            ax.plot(xs, [100 * a["mean"] for a in v], "o-", color=c, ms=3, label=NAMES[m])
+            ax.fill_between(xs, [100 * a["lo"] for a in v], [100 * a["hi"] for a in v], color=c, alpha=0.12)
+            if up in PL:
+                ax.plot([0.97], [100 * PL[up]["methods"][m]["top1"]["mean"]], "D", mfc="white", color=c, ms=5)
+        ax.set_title(f"{k} ({PL[keys[0]]['twins']} twins)"); ax.set_ylim(0, 102); ax.grid(alpha=0.3)
+        ax.set_xticks([0.3, 0.5, 0.7, 0.9, 0.97], ["0.3", "0.5", "0.7", "0.9", "up-\nstream"])
+        ax = axes[1, j]
+        for sil, mk in (("0", "o-"), ("0.5", "s--")):
+            kk = [f"{k}|p_link={x:g}|model=all|silent={sil}" for x in xs]
+            cs = [next(c for c in PL[g]["comparisons"] if c["a"] == "alarm_degree" and c["b"] == "equal") for g in kk]
+            ax.errorbar(xs, [100 * c["diff"] for c in cs], yerr=[[100 * (c["diff"] - c["lo"]) for c in cs], [100 * (c["hi"] - c["diff"]) for c in cs]],
+                        fmt=mk, capsize=2, ms=4, label=f"silent-root prob. {sil}")
+            ku = f"{k}|p_link=0.9|model=upstream|silent={sil}"
+            if ku in PL:
+                cu = next(c for c in PL[ku]["comparisons"] if c["a"] == "alarm_degree" and c["b"] == "equal")
+                ax.errorbar([0.97], [100 * cu["diff"]], yerr=[[100 * (cu["diff"] - cu["lo"])], [100 * (cu["hi"] - cu["diff"])]], fmt="D",
+                            mfc="white", capsize=2, ms=5, color=ax.lines[-1].get_color())
+        ax.axhline(0, color="k", lw=0.8); ax.grid(alpha=0.3); ax.set_xlabel("neighbour LINK_DOWN probability p_link")
+        ax.set_xticks([0.3, 0.5, 0.7, 0.9, 0.97], ["0.3", "0.5", "0.7", "0.9", "up-\nstream"])
+    axes[0, 0].set_ylabel("Top-1 (%), silent 0 and 0.5 pooled"); axes[1, 0].set_ylabel("alarm-degree minus equal-weight trio (pp)")
+    axes[0, -1].legend(fontsize=7, loc="center left", bbox_to_anchor=(1, 0.5)); axes[1, -1].legend(fontsize=7, loc="center left", bbox_to_anchor=(1, 0.5))
+    fig.suptitle("sensitivity to the neighbour-alarm model (noise 0.25; 40 incidents x condition x twin; 95% twin-clustered bootstrap CI). "
+                 "Hollow diamonds: upstream-only LINK_DOWN (p_link 0.9)", fontsize=9)
+    save(fig, "plink_sensitivity")

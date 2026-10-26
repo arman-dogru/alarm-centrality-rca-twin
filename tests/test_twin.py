@@ -67,3 +67,55 @@ def test_poll_delivery_on_grid():
 def test_eligible_roots_excludes_leaves():
     G = tree_twin()
     assert set(eligible_roots(G)) == {0, 1, 2}  # gateway 0 cuts everything; leaves touch only their parent
+
+
+def test_p_link_and_link_models():
+    G = make_twin("mesh", 300, 1)
+    root = eligible_roots(G)[5]
+    base = dict(p_silent=1.0, noise=0.0, p_unreach=0.0, p_degrade=0.0)
+    none = simulate(G, root, FaultParams(p_link=0.0, **base), np.random.default_rng(0))
+    assert "LINK_DOWN" not in none.kinds.values()
+    allk = simulate(G, root, FaultParams(p_link=1.0, **base), np.random.default_rng(0))
+    assert set(allk.alarms) == set(G.neighbors(root))
+    L = G.graph["layer"]
+    up = simulate(G, root, FaultParams(p_link=1.0, link_model="upstream", **base), np.random.default_rng(0))
+    assert set(up.alarms) == {u for u in G.neighbors(root) if L[u] < L[root]}
+    half = [len(simulate(G, root, FaultParams(p_link=0.5, **base), np.random.default_rng(s)).alarms) for s in range(200)]
+    assert abs(np.mean(half) / G.degree(root) - 0.5) < 0.08
+
+
+def test_degraded_spurious_window_and_unreachable_depth():
+    G = nx.path_graph(5)
+    for v in G:
+        G.nodes[v].update(tier="x", region="hierarchical")
+    from rcatwin.twin import _finish
+    G = _finish(G, "hierarchical", [0], np.random.default_rng(0))
+    P = FaultParams(p_silent=1, noise=0, p_link=0, p_unreach=1, p_degrade=1, poll_interval=0, jitter=0, p_trap=0)
+    inc = simulate(G, 1, P, np.random.default_rng(0))
+    assert inc.alarms == {2: 1.0, 3: 2.0, 4: 3.0}  # UNREACHABLE delay grows with hops below the root
+    assert inc.degraded == set() and "DEGRADED" not in inc.kinds.values()  # nothing reachable got longer paths
+    R = ring_twin(8)
+    no_deg = simulate(R, 1, FaultParams(p_silent=1, noise=0, p_link=0, p_degrade=0), np.random.default_rng(0))
+    assert no_deg.alarms == {}
+    deg = simulate(R, 1, FaultParams(p_silent=1, noise=0, p_link=0, p_degrade=1), np.random.default_rng(0))
+    assert set(deg.alarms) == {2, 3}
+    M = make_twin("mesh", 300, 1)
+    ts = [t for s in range(30) for v, t in simulate(M, 10, FaultParams(noise=1.0), np.random.default_rng(s)).alarms.items()
+          if v not in simulate(M, 10, FaultParams(noise=0.0), np.random.default_rng(s)).alarms]
+    assert min(ts) < -30 and max(ts) > 250 and min(ts) >= -60 and max(ts) <= 300  # spurious window [-60, 300] s
+
+
+def test_noise_rate_matches_parameter():
+    G = make_twin("mesh", 300, 1)
+    P = FaultParams(noise=0.5, p_link=1, p_unreach=1, p_degrade=0, p_silent=0)
+    tot, spur = 0, 0
+    for s in range(150):
+        inc = simulate(G, 10, P, np.random.default_rng(s))
+        tot += len(inc.true_alarms); spur += sum(k == "SPURIOUS" for k in inc.kinds.values())
+    assert 0.35 < spur / tot < 0.6  # Poisson(0.5 x #true); collisions with true alarms only lower it
+
+
+def test_eligible_roots_threshold_is_inclusive():
+    G = tree_twin()
+    assert set(eligible_roots(G, min_blast=3)) == {0, 1, 2}  # node 2 touches exactly 3 others
+    assert set(eligible_roots(G, min_blast=4)) == {0, 1}
