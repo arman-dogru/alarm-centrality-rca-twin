@@ -77,22 +77,24 @@ conditions, with neighbour LINK_DOWN probability p_link = 0.9. A p_link sweep ad
 ## Architecture
 
 ```mermaid
-flowchart TB
+flowchart LR
     subgraph Twin["Synthetic twin: rcatwin/twin.py"]
+        direction TB
         G["Seeded generator<br/>hierarchical / star / mesh / hybrid"] --> L["Layers = hops to gateway"]
     end
     subgraph Sim["Faults and alarms: rcatwin/faults.py"]
+        direction TB
         F["Root fault"] --> I["Impact: neighbours,<br/>disconnected, rerouted"]
         I --> A["LINK_DOWN p_link, UNREACHABLE,<br/>DEGRADED, NODE_DOWN, spurious"]
         A --> D["Trap or poll delivery,<br/>jitter, silent root"]
     end
     subgraph RCA["Cascade: rcatwin/rca.py"]
+        direction TB
         S0["Stage 0: 2-hop alarm neighbourhood"] --> S1["Stage 1: components with >= 2 alarms"]
         S1 --> S2["Stage 2: Louvain, cover 80% of alarms"]
         S2 --> C["Trio: alarm-seeded PPR,<br/>alarm-degree, alarm-closeness"]
     end
-    L --> F
-    D --> S0
+    Twin --> Sim --> RCA
 ```
 
 ```mermaid
