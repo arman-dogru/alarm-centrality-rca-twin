@@ -32,7 +32,8 @@ can be audited. All numbers below are rendered from [`results/summary.json`](res
    development incidents and picks alarm-degree for mesh. It gains +0.7 to +28 pp, which means it recovers
    alarm-degree. Even an *oracle* topology label with the blog weights only reaches 63.7%.
 4. **Upstream-walk baselines are strong in trees and weak in meshes.** The common upstream ancestor reaches
-   85% (hierarchical) and 95% (star) Top-1, but only 14.5% in meshes. The trio still beats it in all four
+   85% (hierarchical) and 95% (star) Top-1, but only 14.5% in meshes. Spurious alarms also hurt it: in
+   hierarchical twins it falls from 96% to 62% as noise rises from 0 to 1 spurious alarm per true alarm. The trio still beats it in all four
    topologies (+4 to +14 pp).
 5. **Timing is a trap unless the clocks are ideal.** Earliest alarm in the cascade reaches only 13% Top-1 under
    realistic delivery (trap/poll mix, jitter, pre-fault noise). With ideal clocks (no noise, no polling, no
@@ -195,7 +196,7 @@ is about 2e-4, so the Holm-adjusted floor is 0.008. The exploratory row is outsi
 
 ### Robustness: noise and silent roots
 
-![Line plots of Top-1 against the spurious-alarm rate, one panel per topology. Alarm-degree degrades slowly. Earliest alarm collapses as soon as there is any noise.](docs/figures/top1_vs_noise.png)
+![Line plots of Top-1 against the spurious-alarm rate, one panel per topology. Alarm-conditioned methods are nearly flat. Earliest alarm starts low (13-27% at zero noise) and falls toward 0-11%. Static closeness collapses from 49-65% to under 22%. The common upstream ancestor drops from 96% to 62% in hierarchical twins.](docs/figures/top1_vs_noise.png)
 
 ![Line plots of Top-1 against the silent-root probability. Most methods lose a few points when the root itself does not alarm. In mesh and hybrid twins, alarm-degree climbs steeply (mesh 37% to 77%), because the root's own alarm no longer boosts its neighbours. The other trio members fall.](docs/figures/top1_vs_silent.png)
 
@@ -288,7 +289,7 @@ candidate; `wrong_auto` is the share of *all* incidents auto-remediated on the w
 
 ![Four small example twins: hierarchical, star, mesh and hybrid, with gateways highlighted.](docs/figures/topologies.png)
 
-![One worked mesh incident. Alarming nodes, cascade stages and the trio's top-ranked nodes are drawn around the true root.](docs/figures/worked_incident.png)
+![One worked hybrid-twin incident: a silent star hub fails, producing 45 alarms (15 of them spurious), and the cascade narrows 198 to 188 to 99 candidates. Three panels colour the candidates by alarm-degree, alarm-closeness and alarm-seeded PPR. All three rank the silent root first.](docs/figures/worked_incident.png)
 
 ## Method in brief
 
