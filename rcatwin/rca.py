@@ -185,12 +185,17 @@ def earliest_in(ctx, nodes):
 
 
 def global_pagerank(G, cache={}):
-    """Static PageRank over the whole twin (identical for every incident)."""
-    key = id(G)
-    if key not in cache:
+    """Static PageRank over the whole twin (identical for every incident). Cached per twin under
+    G.graph["twin_id"] = (kind, n, seed); graphs without a twin_id are never cached. (Keying on id(G) was a bug:
+    a freed twin's id can be reused by the next twin in the same worker.)"""
+    key = G.graph.get("twin_id")
+    if key is None or key not in cache:
         nodes = list(G.nodes)
         M, _ = _adj(G, nodes)
-        cache.clear(); cache[key] = _full(len(nodes), nodes, ppr(M, np.ones(len(nodes))))
+        val = _full(len(nodes), nodes, ppr(M, np.ones(len(nodes))))
+        if key is None:
+            return val
+        cache.clear(); cache[key] = val
     return cache[key]
 
 

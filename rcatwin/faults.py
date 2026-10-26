@@ -1,7 +1,8 @@
 """Fault injection and alarm propagation on a twin.
 
 A root node r fails at t0 = 0. The network is re-evaluated without r:
-  * neighbours of r raise LINK_DOWN (probability p_link) after a loss-of-signal hold-down (holddown s);
+  * neighbours of r raise LINK_DOWN (probability p_link) after a loss-of-signal hold-down (holddown s); with
+    link_model="upstream" only neighbours strictly closer to a gateway do;
   * nodes that lose every path to a gateway raise UNREACHABLE (probability p_unreach), detected by the
     poller after the propagation delay (hop_latency per hop below r);
   * nodes that stay reachable but whose gateway distance grows raise DEGRADED (probability p_degrade);
@@ -30,6 +31,8 @@ class FaultParams:
     jitter: float = 5.0
     hop_latency: float = 1.0
     holddown: float = 2.0
+    link_model: str = "all"   # "all": every neighbour of the root can raise LINK_DOWN; "upstream": only neighbours
+                              # strictly closer to a gateway (alternative symptom model, review M1)
 
 
 @dataclass
@@ -75,7 +78,7 @@ def simulate(G, root, P, rng):
     if rng.random() >= P.p_silent:
         emit(root, _deliver(G, root, rng, P), "NODE_DOWN")
     for u in G.neighbors(root):
-        if rng.random() < P.p_link:
+        if rng.random() < P.p_link and (P.link_model == "all" or L0[u] < L0[root]):
             emit(u, _deliver(G, u, rng, P, extra=P.holddown), "LINK_DOWN")
     for v in disc:
         if rng.random() < P.p_unreach:

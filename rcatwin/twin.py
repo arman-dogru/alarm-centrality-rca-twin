@@ -145,4 +145,6 @@ def hybrid(n, rng, region_size=30):
 
 def make_twin(kind, n, seed):
     rng = np.random.default_rng(seed)
-    return {"hierarchical": hierarchical, "star": star, "mesh": mesh, "hybrid": hybrid}[kind](n, rng)
+    G = {"hierarchical": hierarchical, "star": star, "mesh": mesh, "hybrid": hybrid}[kind](n, rng)
+    G.graph["twin_id"] = (kind, int(n), int(seed))  # stable identity for per-twin caches (never id(G))
+    return G

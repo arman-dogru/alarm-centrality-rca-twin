@@ -8,12 +8,21 @@ from .faults import FaultParams, impact, simulate
 TRIO = ("ppr", "alarm_degree", "alarm_closeness")
 
 
-def confidence(s, nodes, trio_scores):
-    """(margin between the top-2 ensemble scores, #trio members whose top-1 equals the ensemble top-1, top-1)."""
-    v = np.sort(s[list(nodes)])[::-1]
+def unique_top(s):
+    """Index of the unique maximum of s, or None when the maximum is tied (no index-based tie-breaking)."""
+    s = np.asarray(s)
     top = int(np.argmax(s))
-    agree = sum(int(np.argmax(trio_scores[k])) == top for k in TRIO)
-    return float(v[0] - v[1]) if len(v) > 1 else 1.0, agree, top
+    return top if int((s == s[top]).sum()) == 1 else None
+
+
+def confidence(s, nodes, trio_scores):
+    """(margin between the top-2 ensemble scores, #trio members whose *unique* top-1 equals the ensemble's unique
+    top-1, ensemble top-1). A tied top never counts as agreement (agree = 0 when the ensemble top is tied); the
+    returned top-1 (used only for the blast radius) is the lowest-index tied node."""
+    v = np.sort(s[list(nodes)])[::-1]
+    top = unique_top(s)
+    agree = 0 if top is None else sum(unique_top(trio_scores[k]) == top for k in TRIO)
+    return float(v[0] - v[1]) if len(v) > 1 else 1.0, agree, int(np.argmax(s))
 
 
 def run_incident(G, root, P, rng, ablations=False, seed=0):
