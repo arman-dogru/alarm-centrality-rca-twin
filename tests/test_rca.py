@@ -138,3 +138,22 @@ def test_rank_optimistic_and_expected_top1():
     assert rca.rank_of(np.array([1.0, -np.inf]), 1, optimistic=True) == 2
     # three-way tie at the top: a root has a 1/3 chance of Top-1; a strict 2nd place has none
     np.testing.assert_allclose(rca.expected_top1([3, 1, 2, 4], [1, 1, 2, 2]), [1 / 3, 1.0, 0.0, 0.0])
+
+
+def test_alarm_degree_self_term_is_exactly_half():
+    G = nx.path_graph(3); G.graph["layer"] = {0: 0, 1: 1, 2: 2}
+    s = rca.trio(ctx_for(G, {1: 0.0, 2: 0.0}), [0, 1, 2])["alarm_degree"]
+    assert list(s) == [1.0, 1.5, 1.5]  # alarming neighbours + 0.5 for the node's own alarm
+
+
+def test_alarm_closeness_unreachable_alarms_count_as_far():
+    G = nx.Graph([(0, 1), (1, 2), (3, 4)]); G.graph["layer"] = {v: 0 for v in G}
+    s = rca.trio(ctx_for(G, {0: 0.0, 2: 0.0}), list(G))["alarm_closeness"]
+    assert s[3] == s[4] == 1 / (1 + 5) and s[0] == s[1] == s[2] == 0.5
+
+
+def test_global_pagerank_cache_keyed_by_twin_id():
+    from rcatwin.twin import make_twin
+    G = make_twin("star", 200, 4)
+    rca.global_pagerank(G)
+    assert list(rca.global_pagerank.__defaults__[0]) == [("star", 200, 4)]

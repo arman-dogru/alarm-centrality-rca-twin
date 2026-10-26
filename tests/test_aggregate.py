@@ -112,3 +112,10 @@ def test_significance_needs_holm_and_ci():
     agg.apply_holm(comps)
     assert [c["significant"] for c in comps] == [True, False, False, False]  # raw p 0.03 < 0.05, but Holm 0.06
     assert comps[2]["p_holm"] == pytest.approx(0.06) and comps[0]["p_holm"] == pytest.approx(4e-4)
+
+
+def test_metrics_bootstrap_is_twin_clustered():
+    # 10 twins: 5 always right, 5 always wrong -> mean 0.5 with a wide twin-level CI (an incident bootstrap would be +-0.03)
+    rows = [{"kind": "mesh", "seed": s, "rank:a": 1 if s < 5 else 2, "rankopt:a": 1 if s < 5 else 2} for s in range(10) for _ in range(100)]
+    m = agg.metrics([("g", pd.DataFrame(rows))], ["a"], np.random.default_rng(0), B=400, comparisons=[])["g"]["methods"]["a"]["top1"]
+    assert m["hi"] - m["lo"] > 0.4
