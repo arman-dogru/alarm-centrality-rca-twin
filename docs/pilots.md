@@ -47,3 +47,13 @@ is committed in [`results/calibration.json`](../results/calibration.json).
      tie-breaking) is reported alongside the pessimistic Top-1;
    - `alarm_degree_tb` (alarm-degree with alarm-closeness as a tie-break) was added. It is labelled
      exploratory: it is not in the planned comparison family or the Holm correction.
+7. **Review round 1 changes (after eval numbers were seen; requested by the reviewer, not chosen by me).**
+   - The `plink` phase varies the neighbour LINK_DOWN probability (0.3/0.5/0.7/0.9) and adds an upstream-only
+     LINK_DOWN model. It showed that alarm-degree's lead over the equal-weight trio depends on the alarm model.
+   - Eval twins went from 10 to 30 per topology (seeds 110-129 added) for the main and plink phases, so the
+     planned comparisons can be tested at the twin level.
+   - The autonomy gate's agreement now counts only unique top nodes. Before, `argmax` broke ties toward low node
+     ids, which are core/aggregation nodes in hierarchical twins.
+   - The global PageRank cache was keyed by `id(G)`, which made one committed size-phase file stale. It is now
+     keyed by `(kind, n, seed)`.
+   - The rerun reproduces every original raw file in its rank columns, except that stale file.
