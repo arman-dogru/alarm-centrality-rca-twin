@@ -1,0 +1,144 @@
+{
+ "killed": 23,
+ "total": 23,
+ "mutants": [
+  {
+   "file": "rcatwin/rca.py",
+   "mutant": "return int((s > r).sum() + 1)",
+   "breaks": "optimistic ties",
+   "killed": true
+  },
+  {
+   "file": "rcatwin/rca.py",
+   "mutant": "        return 1\n",
+   "breaks": "unrankable root counted as a hit",
+   "killed": true
+  },
+  {
+   "file": "rcatwin/rca.py",
+   "mutant": "x_new = alpha * (W @ x + dangling * p) + (1 - alpha) * p",
+   "breaks": "PPR transition transposed",
+   "killed": true
+  },
+  {
+   "file": "rcatwin/rca.py",
+   "mutant": "x_new = alpha * (W.T @ x + dangling * p) + (1 - alpha) / len(p)",
+   "breaks": "PPR restarts uniformly (not alarm-seeded)",
+   "killed": true
+  },
+  {
+   "file": "rcatwin/rca.py",
+   "mutant": "deg = np.asarray(M.sum(1)).ravel() + 0.5 * is_alarm",
+   "breaks": "alarm-degree counts every edge",
+   "killed": true
+  },
+  {
+   "file": "rcatwin/rca.py",
+   "mutant": "close = 1.0 / (1.0 + D.min(0))\n    else:",
+   "breaks": "alarm-closeness uses the nearest alarm only",
+   "killed": true
+  },
+  {
+   "file": "rcatwin/rca.py",
+   "mutant": "keep = comps",
+   "breaks": "decomposition keeps every component",
+   "killed": true
+  },
+  {
+   "file": "rcatwin/rca.py",
+   "mutant": "            if got >= 0:\n                break",
+   "breaks": "clustering keeps one community only",
+   "killed": true
+  },
+  {
+   "file": "rcatwin/rca.py",
+   "mutant": "if L[v] == L[u] + 1 and v not in seen:",
+   "breaks": "common ancestor walks downstream",
+   "killed": true
+  },
+  {
+   "file": "rcatwin/rca.py",
+   "mutant": "ok = c >= c.max()",
+   "breaks": "common ancestor ignores frac",
+   "killed": true
+  },
+  {
+   "file": "rcatwin/rca.py",
+   "mutant": "return _full(ctx.n, ctx.A, ctx.t)",
+   "breaks": "earliest alarm picks the latest",
+   "killed": true
+  },
+  {
+   "file": "rcatwin/rca.py",
+   "mutant": "out[nodes] = v",
+   "breaks": "ensemble mixes raw score scales",
+   "killed": true
+  },
+  {
+   "file": "rcatwin/faults.py",
+   "mutant": "disc = {v for v in others if v in L1}",
+   "breaks": "blast radius inverted",
+   "killed": true
+  },
+  {
+   "file": "rcatwin/faults.py",
+   "mutant": "if rng.random() >= 0:",
+   "breaks": "root never alarms",
+   "killed": true
+  },
+  {
+   "file": "rcatwin/faults.py",
+   "mutant": "emit(v, _deliver(G, v, rng, P, trap_ok=False, extra=-P.hop_latency * hops), \"UNREACHABLE\")",
+   "breaks": "effects before cause",
+   "killed": true
+  },
+  {
+   "file": "rcatwin/faults.py",
+   "mutant": "nxt = phase + P.poll_interval * np.floor((t - phase) / P.poll_interval)",
+   "breaks": "poll before the event",
+   "killed": true
+  },
+  {
+   "file": "rcatwin/faults.py",
+   "mutant": "if len(disc) >= min_blast:",
+   "breaks": "eligible roots need disconnection",
+   "killed": true
+  },
+  {
+   "file": "rcatwin/twin.py",
+   "mutant": "if L[v] == L[u] + 1)",
+   "breaks": "upstream graph points downstream",
+   "killed": true
+  },
+  {
+   "file": "rcatwin/stats.py",
+   "mutant": "np.add.at(W[b], rng.integers(0, len(clusters), len(m)), 1)",
+   "breaks": "bootstrap ignores clusters",
+   "killed": true
+  },
+  {
+   "file": "rcatwin/stats.py",
+   "mutant": "null >= obs - 1e-12",
+   "breaks": "one-sided sign-flip",
+   "killed": true
+  },
+  {
+   "file": "rcatwin/stats.py",
+   "mutant": "run = min(1.0, (k - r) * p[i])",
+   "breaks": "Holm not monotone",
+   "killed": true
+  },
+  {
+   "file": "rcatwin/triage.py",
+   "mutant": "\"cycle_rank\": (m - n) / max(1, n)",
+   "breaks": "cycle rank ignores components",
+   "killed": true
+  },
+  {
+   "file": "rcatwin/triage.py",
+   "mutant": "    if f[\"hub_share\"] >= hub_share_min:\n        return \"mesh\"",
+   "breaks": "star rule returns mesh",
+   "killed": true
+  }
+ ]
+}
