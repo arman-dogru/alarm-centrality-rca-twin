@@ -1,6 +1,6 @@
 """scripts/aggregate.py on toy data frames: dev-only calibration, the triage rule, derived methods (oracle, blog
 mapping), bootstrap metrics with unequal twins and the significance rule."""
-import importlib.util, os
+import importlib.util, json, os, subprocess, sys
 
 import numpy as np
 import pandas as pd
@@ -61,7 +61,7 @@ def test_main_reads_only_dev_for_calibration(tmp_path, monkeypatch):
     monkeypatch.setattr(agg, "apply_holm", lambda comps: None)
     monkeypatch.setattr(agg, "METHODS", ["ppr", "alarm_degree", "equal"])
     monkeypatch.setattr(agg, "B", 20)
-    agg.main(str(tmp_path), allow_partial=True)  # partial on purpose: only the calibration path is under test
+    agg.main(str(tmp_path), allow_partial=True, out=str(tmp_path / "scratch"))  # partial on purpose: only calibration is under test
     assert seen == [[1]]
 
 
@@ -197,3 +197,54 @@ def test_check_grid_complete_missing_and_unexpected(tmp_path):
     (tmp_path / "size" / "mesh_n9_s1_bogus.csv.gz").touch()
     prob = agg.check_grid(str(tmp_path))
     assert prob == {"plink": ([gone], []), "size": ([], ["mesh_n9_s1_bogus.csv.gz"])}
+
+
+# ---- review round 3 (N2): --allow-partial never touches results/, extra-file wording, readme_tables refusal -----
+def _partial_raw(tmp_path):
+    raw = tmp_path / "raw"
+    for ph, seeds in (("dev", [1]), ("main", [100])):
+        os.makedirs(raw / ph)
+        toy(seeds).to_csv(raw / ph / "x.csv.gz", index=False, compression="gzip")
+    return raw
+
+
+def test_allow_partial_requires_a_scratch_out_dir(tmp_path, monkeypatch, capsys):
+    raw = _partial_raw(tmp_path)
+    monkeypatch.setattr(agg, "ROOT", str(tmp_path)); os.makedirs(tmp_path / "results")
+    for out in (None, str(tmp_path / "results"), str(tmp_path / "results") + "/"):
+        with pytest.raises(SystemExit) as e:
+            agg.main(str(raw), allow_partial=True, out=out)
+        assert e.value.code == 2 and "--out" in capsys.readouterr().err
+    assert os.listdir(tmp_path / "results") == []  # nothing written to the committed results dir
+    monkeypatch.setattr(agg, "groups_for", lambda phase, df: [("all", df)])
+    monkeypatch.setattr(agg, "METHODS", ["ppr", "alarm_degree", "equal"])
+    monkeypatch.setattr(agg, "B", 20)
+    agg.main(str(raw), allow_partial=True, out=str(tmp_path / "scratch"))
+    assert os.listdir(tmp_path / "results") == []
+    S = json.load(open(tmp_path / "scratch" / "summary.json"))
+    assert "partial" in S and S["partial"]["main"]["missing"] == 1440 and os.path.exists(tmp_path / "scratch" / "calibration.json")
+
+
+def test_extra_files_message_says_unexpected_not_incomplete():
+    exp = agg.expected_files()
+    only_extra = {"size": ([], ["mesh_n9_s1_bogus.csv.gz"])}
+    msg = agg.grid_problems_message(only_extra, "R")
+    assert "unexpected files" in msg and "incomplete" not in msg
+    missing = {"main": ([sorted(exp["main"])[0]], [])}
+    assert "incomplete" in agg.grid_problems_message(missing, "R")
+
+
+def _run_tables(summary, tmp_path):
+    p = tmp_path / "summary.json"; json.dump(summary, open(p, "w"))
+    script = os.path.join(os.path.dirname(__file__), "..", "scripts", "readme_tables.py")
+    return subprocess.run([sys.executable, script], env={**os.environ, "RCA_SUMMARY": str(p)}, capture_output=True, text=True)
+
+
+def test_readme_tables_refuses_partial_or_incomplete_summary(tmp_path):
+    full = json.load(open(os.path.join(os.path.dirname(__file__), "..", "results", "summary.json")))
+    r = _run_tables({**full, "partial": {"main": {"missing": 3, "unexpected": 0}}}, tmp_path)
+    assert r.returncode == 3 and "refusing" in r.stderr and "incomplete grid" in r.stderr and "Traceback" not in r.stderr
+    r = _run_tables({**full, "phases": {"main": full["phases"]["main"]}}, tmp_path)
+    assert r.returncode == 3 and "phases missing" in r.stderr and "plink" in r.stderr and "Traceback" not in r.stderr
+    r = _run_tables(full, tmp_path)
+    assert r.returncode == 0 and "## headline" in r.stdout

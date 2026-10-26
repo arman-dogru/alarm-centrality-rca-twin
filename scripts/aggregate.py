@@ -12,10 +12,11 @@
    incident-level sign-flip is kept only as a descriptive number). Holm over the 40 per-topology planned
    comparisons of the main phase. A comparison is significant only when Holm p < 0.05 AND the CI excludes 0.
 Outputs: results/<phase>_incidents.csv.gz (tidy per-incident ranks), results/summary.json, results/calibration.json
-Usage: python scripts/aggregate.py [--raw results/raw] [--allow-partial]
+Usage: python scripts/aggregate.py [--raw results/raw] [--allow-partial --out SCRATCH_DIR]
 The raw directory must hold the complete grid of rcatwin/grid.py (every twin x condition file of every phase);
 otherwise the script exits with status 2 and lists what is missing, so a half-finished run_grid.py can never
-overwrite results/summary.json. --allow-partial is for debugging only (the summary is then flagged "partial").
+overwrite results/summary.json. --allow-partial is for debugging only: it requires --out, a directory other than
+results/, and writes a summary flagged "partial" there (readme_tables.py and make_figures.py refuse such a summary).
 """
 import argparse, glob, json, os, sys
 import numpy as np
@@ -68,13 +69,16 @@ def check_grid(raw, phases_needed=PHASES):
 
 
 def grid_problems_message(problems, raw):
-    lines = [f"aggregate.py: the raw grid in {raw} is incomplete (is run_grid.py still running?):"]
+    missing_any = any(m for m, _ in problems.values())
+    lines = [f"aggregate.py: the raw grid in {raw} is incomplete (is run_grid.py still running?):" if missing_any else
+             f"aggregate.py: the raw grid in {raw} has unexpected files (not part of rcatwin/grid.py):"]
     exp = expected_files()
     for ph, (missing, extra) in problems.items():
         lines.append(f"  {ph}: {len(exp[ph]) - len(missing)}/{len(exp[ph])} expected files present"
                      + (f", {len(extra)} unexpected" if extra else "")
                      + (f"; first missing: {missing[0]}" if missing else f"; first unexpected: {extra[0]}"))
-    lines.append("Wait for the grid to finish (or pass --allow-partial for a flagged debugging summary).")
+    lines.append("Wait for the grid to finish (or pass --allow-partial --out DIR for a flagged debugging summary)."
+                 if missing_any else "Move the unexpected files out of the raw directory (or use --allow-partial --out DIR).")
     return "\n".join(lines)
 
 
@@ -219,14 +223,20 @@ def holm_families(M):
     apply_holm([c for c in M.get("all", {"comparisons": []})["comparisons"] if c["planned"]])
 
 
-def main(raw, allow_partial=False):
+def main(raw, allow_partial=False, out=None):
+    committed = os.path.realpath(os.path.join(ROOT, "results"))
+    if allow_partial and (out is None or os.path.realpath(out) == committed):
+        print("aggregate.py: --allow-partial needs --out DIR, a scratch directory other than results/ "
+              "(a partial summary must never overwrite the committed results)", file=sys.stderr)
+        raise SystemExit(2)
     problems = check_grid(raw)
     if problems:
         print(grid_problems_message(problems, raw), file=sys.stderr)
         if not allow_partial:
             raise SystemExit(2)
     rng = np.random.default_rng(7)
-    res = os.path.join(ROOT, "results")
+    res = out if allow_partial else os.path.join(ROOT, "results")
+    os.makedirs(res, exist_ok=True)
     cal, tree = calibrate(load(raw, "dev"))
     json.dump(cal, open(os.path.join(res, "calibration.json"), "w"), indent=1)
     summary = {"calibration": cal, "phases": {}}
@@ -254,5 +264,6 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--raw", default=os.path.join(ROOT, "results", "raw"))
     ap.add_argument("--allow-partial", action="store_true", help="debugging only: aggregate an incomplete grid")
+    ap.add_argument("--out", help="required with --allow-partial: scratch directory for the flagged outputs")
     a = ap.parse_args()
-    main(a.raw, a.allow_partial)
+    main(a.raw, a.allow_partial, a.out)

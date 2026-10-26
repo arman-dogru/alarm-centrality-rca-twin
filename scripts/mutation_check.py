@@ -79,6 +79,12 @@ M = [  # (file, original, mutant, what it breaks)
     ("rcatwin/grid.py", "P_LINK = (0.3, 0.5, 0.7, 0.9)", "P_LINK = (0.9, 0.9, 0.9, 0.9)", "p_link sweep collapsed"),
     ("scripts/aggregate.py", "        if not allow_partial:\n            raise SystemExit(2)", "        if not allow_partial:\n            pass", "aggregate accepts an incomplete grid"),
     ("scripts/aggregate.py", "        if have != want:", "        if not have:", "grid check only notices empty phases"),
+    # ---- review round 3 (N2) ----
+    ("scripts/aggregate.py", "    if allow_partial and (out is None or os.path.realpath(out) == committed):", "    if False:", "--allow-partial may run without a scratch --out"),
+    ("scripts/aggregate.py", "    res = out if allow_partial else os.path.join(ROOT, \"results\")", "    res = os.path.join(ROOT, \"results\")", "--allow-partial writes into committed results/"),
+    ("scripts/aggregate.py", "    missing_any = any(m for m, _ in problems.values())", "    missing_any = True", "extra files reported as an incomplete grid"),
+    ("scripts/readme_tables.py", "        raise SystemExit(3)", "        pass", "readme_tables renders (crashes on) a bad summary"),
+    ("scripts/readme_tables.py", "    if \"partial\" in S:", "    if False:", "readme_tables ignores the partial flag"),
 ]
 
 
@@ -89,6 +95,8 @@ def main():
         try:
             for d in ("rcatwin", "tests", "scripts"):
                 shutil.copytree(os.path.join(ROOT, d), os.path.join(tmp, d), ignore=shutil.ignore_patterns("__pycache__"))
+            os.makedirs(os.path.join(tmp, "results"))  # the readme_tables test renders the committed summary
+            shutil.copy(os.path.join(ROOT, "results", "summary.json"), os.path.join(tmp, "results", "summary.json"))
             p = os.path.join(tmp, f); src = open(p).read()
             assert src.count(old) == 1, f"{f}: mutation site not unique/found: {old}"
             open(p, "w").write(src.replace(old, new))

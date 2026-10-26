@@ -16,6 +16,8 @@ from rcatwin.twin import make_twin
 FIG = "docs/figures"; os.makedirs(FIG, exist_ok=True)
 plt.rcParams.update({"font.size": 9, "axes.spines.top": False, "axes.spines.right": False})
 S = json.load(open("results/summary.json"))
+if "partial" in S or not {"main", "plink", "poll", "ablate", "size"} <= set(S.get("phases", {})):
+    sys.exit("make_figures.py: refusing a partial or incomplete results/summary.json (re-run aggregate.py on the full grid)")
 KINDS = ["hierarchical", "star", "mesh", "hybrid"]
 NAMES = {"random_candidate": "random (cascade candidates)", "global_pagerank": "global PageRank (static)",
          "earliest_alarm": "earliest alarm", "earliest_in_cascade": "earliest alarm in cascade",

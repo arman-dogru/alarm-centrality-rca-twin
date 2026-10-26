@@ -41,3 +41,13 @@ is pinned by a test:
 | p_link sweep collapsed to one value | `test_plink_sweep_is_not_collapsed` |
 | aggregate accepts an incomplete grid | `test_aggregate_refuses_an_incomplete_grid` |
 | grid check only notices empty phases | `test_check_grid_complete_missing_and_unexpected` |
+
+## Round-3 additions (review nit N2)
+
+| mutant | killed by |
+|---|---|
+| `--allow-partial` may run without a scratch `--out` | `test_allow_partial_requires_a_scratch_out_dir` |
+| `--allow-partial` writes into the committed `results/` | same test (results/ must stay empty) |
+| extra files reported as an incomplete grid | `test_extra_files_message_says_unexpected_not_incomplete` |
+| `readme_tables.py` renders (and crashes on) a bad summary | `test_readme_tables_refuses_partial_or_incomplete_summary` |
+| `readme_tables.py` ignores the `partial` flag | same test |

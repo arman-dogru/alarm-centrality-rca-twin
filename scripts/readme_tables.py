@@ -1,11 +1,36 @@
 """Render the README's result tables from results/summary.json (no hand-copied numbers).
 
 Usage: python scripts/readme_tables.py [--write]   (--write replaces the <!-- BEGIN:x --> ... <!-- END:x --> blocks)
+Refuses (exit 3) a summary that aggregate.py flagged "partial" or that lacks a phase, instead of crashing.
+RCA_SUMMARY=path overrides the summary file (used by the tests).
 """
 import json, os, re, sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-S = json.load(open(os.path.join(ROOT, "results", "summary.json")))
+REQUIRED_PHASES = ("main", "plink", "poll", "ablate", "size")
+
+
+def summary_problems(S):
+    """Reasons a summary cannot be rendered (empty list = fine)."""
+    out = []
+    if "partial" in S:
+        out.append(f"it was aggregated from an incomplete grid (partial: {sorted(S['partial'])})")
+    missing = [p for p in REQUIRED_PHASES if p not in S.get("phases", {})]
+    if missing:
+        out.append(f"phases missing: {missing}")
+    return out
+
+
+def load_summary(path):
+    S = json.load(open(path))
+    bad = summary_problems(S)
+    if bad:
+        print(f"readme_tables.py: refusing to render {path}: " + "; ".join(bad), file=sys.stderr)
+        raise SystemExit(3)
+    return S
+
+
+S = load_summary(os.environ.get("RCA_SUMMARY", os.path.join(ROOT, "results", "summary.json")))
 M = S["phases"]["main"]
 KINDS = ["hierarchical", "star", "mesh", "hybrid"]
 NAMES = {"random_candidate": "random candidate in cascade", "global_pagerank": "global PageRank (no cascade)",

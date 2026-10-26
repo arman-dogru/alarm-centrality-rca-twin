@@ -1,6 +1,6 @@
 {
- "killed": 72,
- "total": 72,
+ "killed": 77,
+ "total": 77,
  "mutants": [
   {
    "file": "rcatwin/rca.py",
@@ -432,6 +432,36 @@
    "file": "scripts/aggregate.py",
    "mutant": "        if not have:",
    "breaks": "grid check only notices empty phases",
+   "killed": true
+  },
+  {
+   "file": "scripts/aggregate.py",
+   "mutant": "    if False:",
+   "breaks": "--allow-partial may run without a scratch --out",
+   "killed": true
+  },
+  {
+   "file": "scripts/aggregate.py",
+   "mutant": "    res = os.path.join(ROOT, \"results\")",
+   "breaks": "--allow-partial writes into committed results/",
+   "killed": true
+  },
+  {
+   "file": "scripts/aggregate.py",
+   "mutant": "    missing_any = True",
+   "breaks": "extra files reported as an incomplete grid",
+   "killed": true
+  },
+  {
+   "file": "scripts/readme_tables.py",
+   "mutant": "        pass",
+   "breaks": "readme_tables renders (crashes on) a bad summary",
+   "killed": true
+  },
+  {
+   "file": "scripts/readme_tables.py",
+   "mutant": "    if False:",
+   "breaks": "readme_tables ignores the partial flag",
    "killed": true
   }
  ]

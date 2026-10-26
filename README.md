@@ -412,8 +412,8 @@ statistics. See [`docs/pilots.md`](docs/pilots.md) for the decisions made on dev
 
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt   # pinned; requirements-lock.txt = full freeze
-.venv/bin/python -m pytest -q                                              # unit tests (61)
-.venv/bin/python scripts/mutation_check.py                                 # 72 single-line mutants, all must be killed
+.venv/bin/python -m pytest -q                                              # unit tests (64)
+.venv/bin/python scripts/mutation_check.py                                 # 77 single-line mutants, all must be killed
 mkdir -p logs
 # results/raw is committed and run_grid.py skips existing files, so recompute into a scratch directory
 # (or pass --force to overwrite results/raw in place):
@@ -430,6 +430,10 @@ written atomically, so an interrupted run resumes where it stopped. Randomness i
 outside the `ms_*` timing columns. The figures reproduce pixel-identically from the same results, except
 `docs/figures/size_scaling.png`: its left panel plots measured runtimes, so it changes from run to run. Scripts resolve paths from their own location, so they can run from any directory.
 
+For debugging only, `aggregate.py --allow-partial --out SCRATCH_DIR` aggregates an incomplete grid into a scratch
+directory, never into `results/`, and flags that summary as `"partial"`. `readme_tables.py` and `make_figures.py`
+refuse a partial or incomplete summary (readme_tables exits with status 3).
+
 **Quality gates:**
 - [`tests/`](tests) covers the generators, the impact and alarm model (including p_link and the upstream-only
   model), the cascade, the centralities and ties, the ensemble, `run_incident` ranks and the tie-break, the
@@ -440,7 +444,7 @@ outside the `ms_*` timing columns. The figures reproduce pixel-identically from 
   twins_pos/neg with zero-difference twins, the pooled and per-topology Holm families, and twin means with
   unequal twins. It also checks the grid-completeness guard, that dev and eval seeds are disjoint, and that the
   p_link sweep stays a sweep.
-- [`scripts/mutation_check.py`](scripts/mutation_check.py) applies 72 single-line mutants, including the
+- [`scripts/mutation_check.py`](scripts/mutation_check.py) applies 77 single-line mutants, including the
   reviewer's, to `rcatwin/` and `scripts/aggregate.py`. Every one must make a test fail
   ([`results/mutation_check.json`](results/mutation_check.json)). The mutants that cannot be killed because
   they are true equivalents are listed with reasons in [`docs/mutation.md`](docs/mutation.md).
