@@ -112,3 +112,20 @@ def test_weighted_is_percentile_average():
     assert list(np.argsort(w[:3])) == [0, 2, 1] and w[3] == -np.inf
     e = rca.weighted(tr, [0, 1, 2], {k: 1 / 3 for k in tr})
     assert np.argmax(e) == 2
+
+
+def test_weighted_values_are_scale_free():
+    tr = {"ppr": np.array([0.01, 0.03, 0.02]), "alarm_degree": np.array([300.0, 100.0, 200.0]),
+          "alarm_closeness": np.array([0.0, 0.0, 1.0])}
+    e = rca.weighted(tr, [0, 1, 2], {k: 1 / 3 for k in tr})
+    assert np.allclose(e, [(0 + 1 + 0.25) / 3, (1 + 0 + 0.25) / 3, (0.5 + 0.5 + 1) / 3])
+    scaled = {k: v * (1000 if k == "ppr" else 1) for k, v in tr.items()}
+    assert np.allclose(rca.weighted(scaled, [0, 1, 2], {k: 1 / 3 for k in tr}), e)
+
+
+def test_cascade_cluster_covers_alarms_across_communities():
+    G = nx.connected_caveman_graph(6, 8)
+    G.graph["layer"] = {v: 0 for v in G}
+    alarms = {v: 0 for v in [1, 2, 3, 4, 9, 10, 11, 12]}  # half in clique 0, half in clique 1
+    nodes, _ = rca.cascade(ctx_for(G, alarms), hops=1, cover=0.8)
+    assert set(alarms) <= set(nodes)  # one community would cover only 50% < 80%
