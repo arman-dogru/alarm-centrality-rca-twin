@@ -129,3 +129,12 @@ def test_cascade_cluster_covers_alarms_across_communities():
     alarms = {v: 0 for v in [1, 2, 3, 4, 9, 10, 11, 12]}  # half in clique 0, half in clique 1
     nodes, _ = rca.cascade(ctx_for(G, alarms), hops=1, cover=0.8)
     assert set(alarms) <= set(nodes)  # one community would cover only 50% < 80%
+
+
+def test_rank_optimistic_and_expected_top1():
+    s = np.array([0.9, 0.9, 0.9, 0.1])
+    assert rca.rank_of(s, 0) == 3 and rca.rank_of(s, 0, optimistic=True) == 1
+    assert rca.rank_of(s, 3, optimistic=True) == rca.rank_of(s, 3) == 4
+    assert rca.rank_of(np.array([1.0, -np.inf]), 1, optimistic=True) == 2
+    # three-way tie at the top: a root has a 1/3 chance of Top-1; a strict 2nd place has none
+    np.testing.assert_allclose(rca.expected_top1([3, 1, 2, 4], [1, 1, 2, 2]), [1 / 3, 1.0, 0.0, 0.0])

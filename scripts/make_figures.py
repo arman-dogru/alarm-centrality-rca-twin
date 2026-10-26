@@ -20,12 +20,13 @@ NAMES = {"random_candidate": "random (cascade candidates)", "global_pagerank": "
          "common_ancestor": "common ancestor (upstream walk)", "static_pagerank": "static PageRank (cascade)",
          "static_degree": "static degree (cascade)", "static_closeness": "static closeness (cascade)",
          "ppr": "alarm-seeded PPR", "alarm_degree": "alarm-degree", "alarm_closeness": "alarm-closeness",
+         "alarm_degree_tb": "alarm-degree, closeness tie-break*",
          "equal": "trio, equal weights", "triage_blog_select": "triage: blog mapping, select",
          "triage_blog_weighted": "triage: blog mapping, weighted", "triage_dev_select": "triage: dev-tuned mapping",
          "triage_tree_weighted": "triage: learned tree, weighted", "oracle_label_weighted": "oracle topology label, weighted",
          "oracle_incident": "oracle: best trio member per incident"}
 GROUP = {m: "baseline" for m in list(NAMES)[:8]}
-GROUP.update({m: "alarm-conditioned" for m in ("ppr", "alarm_degree", "alarm_closeness", "equal")})
+GROUP.update({m: "alarm-conditioned" for m in ("ppr", "alarm_degree", "alarm_closeness", "alarm_degree_tb", "equal")})
 GROUP.update({m: "triage" for m in NAMES if m.startswith("triage")})
 GROUP.update({m: "oracle" for m in NAMES if m.startswith("oracle")})
 COL = {"baseline": "#8c8c8c", "alarm-conditioned": "#1f77b4", "triage": "#ff7f0e", "oracle": "#2ca02c"}
@@ -53,7 +54,7 @@ axes[0].set_yticks(y, [NAMES[m] for m in meths]); axes[0].invert_yaxis()
 for g, c in COL.items():
     axes[-1].plot([], [], "o", color=c, label=g)
 axes[-1].legend(loc="lower right", fontsize=8)
-fig.suptitle("Top-1 accuracy over the main grid (4 noise levels x 3 silent-root rates), 95% twin x incident bootstrap CI")
+fig.suptitle("Top-1 accuracy over the main grid (4 noise levels x 3 silent-root rates), 95% twin x incident bootstrap CI; ties count against the root; * exploratory")
 save(fig, "top1_by_method")
 
 # 2. robustness: Top-1 vs noise and vs silent-root rate ----------------------------------------------
@@ -193,7 +194,7 @@ save(fig, "autonomy")
 # 8. forest plot of planned comparisons --------------------------------------------------------------
 fig, axes = plt.subplots(1, 4, figsize=(16, 4.5), sharey=True)
 for ax, k in zip(axes, KINDS):
-    cs = main[k]["comparisons"]
+    cs = [c for c in main[k]["comparisons"] if c["planned"]]
     for yi, c in enumerate(cs):
         col = ("#2ca02c" if c["diff"] > 0 else "#d62728") if c["significant"] else "#555555"
         ax.errorbar(100 * c["diff"], yi, xerr=[[100 * (c["diff"] - c["lo"])], [100 * (c["hi"] - c["diff"])]], fmt="o", color=col, capsize=2, ms=4)

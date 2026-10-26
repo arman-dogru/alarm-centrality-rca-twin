@@ -5,7 +5,9 @@ import json, os, shutil, subprocess, sys, tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 M = [  # (file, original, mutant, what it breaks)
-    ("rcatwin/rca.py", "return int((s > r).sum() + (s == r).sum())", "return int((s > r).sum() + 1)", "optimistic ties"),
+    ("rcatwin/rca.py", "(1 if optimistic else (s == r).sum())", "(1 if optimistic else 1)", "pessimistic rank breaks ties for the root"),
+    ("rcatwin/rca.py", "(1 if optimistic else (s == r).sum())", "((s == r).sum() if optimistic else (s == r).sum())", "optimistic rank counts ties against the root"),
+    ("rcatwin/rca.py", "return (np.asarray(opt) == 1) / (np.asarray(pess) - np.asarray(opt) + 1.0)", "return (np.asarray(pess) == 1) / (np.asarray(pess) - np.asarray(opt) + 1.0)", "ties-split Top-1 uses the pessimistic rank"),
     ("rcatwin/rca.py", "        return len(s)\n", "        return 1\n", "unrankable root counted as a hit"),
     ("rcatwin/rca.py", "x_new = alpha * (W.T @ x + dangling * p) + (1 - alpha) * p", "x_new = alpha * (W @ x + dangling * p) + (1 - alpha) * p", "PPR transition transposed"),
     ("rcatwin/rca.py", "x_new = alpha * (W.T @ x + dangling * p) + (1 - alpha) * p", "x_new = alpha * (W.T @ x + dangling * p) + (1 - alpha) / len(p)", "PPR restarts uniformly (not alarm-seeded)"),

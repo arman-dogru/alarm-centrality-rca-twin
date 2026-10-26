@@ -12,13 +12,20 @@ from scipy.sparse.csgraph import shortest_path
 NEG = -np.inf
 
 
-def rank_of(scores, root):
-    """1-based rank of root; ties count against it; a -inf root is ranked last among all nodes."""
+def rank_of(scores, root, optimistic=False):
+    """1-based rank of root; ties count against it (optimistic=True: ties count for it); a -inf root is ranked
+    last among all nodes. With both, the expected Top-1 under random tie-breaking is
+    [opt == 1] / (pess - opt + 1)."""
     s = np.asarray(scores, float)
     r = s[root]
     if r == NEG:
         return len(s)
-    return int((s > r).sum() + (s == r).sum())
+    return int((s > r).sum() + (1 if optimistic else (s == r).sum()))
+
+
+def expected_top1(pess, opt):
+    """Expected Top-1 under uniformly random tie-breaking, from pessimistic and optimistic ranks."""
+    return (np.asarray(opt) == 1) / (np.asarray(pess) - np.asarray(opt) + 1.0)
 
 
 # --- context shared by all methods for one incident -------------------------------------------------

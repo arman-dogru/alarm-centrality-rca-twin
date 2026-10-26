@@ -36,6 +36,9 @@ def run_incident(G, root, P, rng, ablations=False, seed=0):
     f_ctx = triage.features(G, sorted(rca.neighbourhood(G, nodes, 1)))
     S = dict(tr)
     S["equal"] = rca.weighted(tr, nodes, triage.EQUAL)
+    # alarm-degree is integer-valued (+0.5 for a self alarm), so the root often ties with a neighbour in clustered
+    # meshes; this variant breaks ties by alarm-closeness (diagnosed on a dev twin, see docs/pilots.md)
+    S["alarm_degree_tb"] = tr["alarm_degree"] + 1e-3 * rca.pct(tr["alarm_closeness"], nodes)
     for lab in triage.LABELS:  # the triage agent's choice is applied offline (scripts/aggregate.py) from features
         S[f"w_{lab}"] = rca.weighted(tr, nodes, triage.WEIGHTS[lab])
     S.update(rca.static_centralities(ctx, nodes))
@@ -48,6 +51,7 @@ def run_incident(G, root, P, rng, ablations=False, seed=0):
     t4 = time.perf_counter()
     for k, s in S.items():
         out[f"rank:{k}"] = rca.rank_of(s, root)
+        out[f"rankopt:{k}"] = rca.rank_of(s, root, optimistic=True)
     out.update({f"stage:{k}": v for k, v in st.items()})
     out["root_in_s0"] = int(root in rca.neighbourhood(G, ctx.A, 2))
     out["root_in_s2"] = int(root in set(nodes))
@@ -67,8 +71,11 @@ def run_incident(G, root, P, rng, ablations=False, seed=0):
             t["equal"] = rca.weighted(t, nd, triage.EQUAL)
             for k, s in t.items():
                 abl[f"rank:{k}@{name}"] = rca.rank_of(s, root)
+                abl[f"rankopt:{k}@{name}"] = rca.rank_of(s, root, optimistic=True)
             abl[f"size@{name}"] = len(nd)
         for name, kw in {"ppr_directed": dict(directed=True), "ppr_alpha50": dict(alpha=0.5), "ppr_alpha95": dict(alpha=0.95)}.items():
-            abl[f"rank:ppr@{name}"] = rca.rank_of(rca.trio(ctx, nodes, **kw)["ppr"], root)
+            sc = rca.trio(ctx, nodes, **kw)["ppr"]
+            abl[f"rank:ppr@{name}"] = rca.rank_of(sc, root)
+            abl[f"rankopt:ppr@{name}"] = rca.rank_of(sc, root, optimistic=True)
         out.update(abl)
     return out

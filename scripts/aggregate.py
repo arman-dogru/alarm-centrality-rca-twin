@@ -17,6 +17,7 @@ import pandas as pd
 from sklearn.tree import DecisionTreeClassifier, export_text
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from rcatwin.rca import expected_top1
 from rcatwin.stats import boot_means, ci, cluster_weights, holm, signflip_p
 from rcatwin.triage import LABELS, SELECT
 
@@ -72,28 +73,34 @@ json.dump(cal, open("results/calibration.json", "w"), indent=1)
 # 2. derived methods ----------------------------------------------------------------------------------
 def derive(df):
     df = df[df.no_alarms == 0].reset_index(drop=True).copy()
-    df["rank:common_ancestor"] = df[f"rank:common_ancestor_{cal['common_ancestor_frac']['chosen']}"]
+    for pre in ("rank", "rankopt"):
+        df[f"{pre}:common_ancestor"] = df[f"{pre}:common_ancestor_{cal['common_ancestor_frac']['chosen']}"]
     r = cal["rule"]
     df["triage_rule"] = rule(df, r["scope"], r["cycle_rank_mesh_min"], r["deg_cv_star_min"])
     df["triage_tree"] = tree.predict(df[Xcols])
-    pick = lambda labs, f: np.array([df.at[i, f"rank:{f(l)}"] for i, l in enumerate(labs)])
-    df["rank:triage_blog_select"] = pick(df.triage_rule, lambda l: SELECT[l])
-    df["rank:triage_blog_weighted"] = pick(df.triage_rule, lambda l: f"w_{l}")
-    df["rank:triage_dev_select"] = pick(df.triage_rule, lambda l: cal["dev_best_member"][l]["chosen"])
-    df["rank:triage_tree_weighted"] = pick(df.triage_tree, lambda l: f"w_{l}")
-    df["rank:oracle_label_weighted"] = pick(df.true_label, lambda l: f"w_{l}")
-    df["rank:oracle_incident"] = df[["rank:ppr", "rank:alarm_degree", "rank:alarm_closeness"]].min(1)
+    for pre in ("rank", "rankopt"):
+        pick = lambda labs, f: np.array([df.at[i, f"{pre}:{f(l)}"] for i, l in enumerate(labs)])
+        df[f"{pre}:triage_blog_select"] = pick(df.triage_rule, lambda l: SELECT[l])
+        df[f"{pre}:triage_blog_weighted"] = pick(df.triage_rule, lambda l: f"w_{l}")
+        df[f"{pre}:triage_dev_select"] = pick(df.triage_rule, lambda l: cal["dev_best_member"][l]["chosen"])
+        df[f"{pre}:triage_tree_weighted"] = pick(df.triage_tree, lambda l: f"w_{l}")
+        df[f"{pre}:oracle_label_weighted"] = pick(df.true_label, lambda l: f"w_{l}")
+    trio_r = ["rank:ppr", "rank:alarm_degree", "rank:alarm_closeness"]
+    best = df[trio_r].to_numpy().argmin(1)  # oracle: the trio member with the best (pessimistic) rank
+    df["rank:oracle_incident"] = df[trio_r].to_numpy()[np.arange(len(df)), best]
+    df["rankopt:oracle_incident"] = df[[c.replace("rank:", "rankopt:") for c in trio_r]].to_numpy()[np.arange(len(df)), best]
     return df
 
 
 METHODS = ["random_candidate", "global_pagerank", "earliest_alarm", "earliest_in_cascade", "common_ancestor",
            "static_pagerank", "static_degree", "static_closeness", "ppr", "alarm_degree", "alarm_closeness",
-           "equal", "triage_blog_select", "triage_blog_weighted", "triage_dev_select", "triage_tree_weighted",
+           "alarm_degree_tb", "equal", "triage_blog_select", "triage_blog_weighted", "triage_dev_select", "triage_tree_weighted",
            "oracle_label_weighted", "oracle_incident"]
 COMPARISONS = [("ppr", "static_pagerank"), ("alarm_degree", "static_degree"), ("alarm_closeness", "static_closeness"),
                ("equal", "earliest_in_cascade"), ("equal", "common_ancestor"),
                ("triage_blog_weighted", "equal"), ("triage_blog_select", "equal"), ("triage_dev_select", "equal"),
                ("triage_tree_weighted", "equal"), ("alarm_degree", "equal")]
+EXPLORATORY = [("alarm_degree_tb", "alarm_degree")]  # added after the first look at the eval grid; not in the Holm family
 
 
 def metrics(df, groups, methods):
@@ -102,19 +109,22 @@ def metrics(df, groups, methods):
     for key, g in groups:
         W = cluster_weights(g.seed.to_numpy(), B, rng)
         R = np.stack([g[f"rank:{m}"].to_numpy(float) for m in methods])
-        vals = {"top1": (R == 1).astype(float), "top5": (R <= 5).astype(float), "mrr": 1.0 / R}
+        Ro = np.stack([g[f"rankopt:{m}"].to_numpy(float) for m in methods])
+        vals = {"top1": (R == 1).astype(float), "top5": (R <= 5).astype(float), "mrr": 1.0 / R,
+                "top1_ties_split": expected_top1(R, Ro)}  # expected Top-1 under random tie-breaking
         res = {"n": int(len(g)), "twins": int(g.seed.nunique()), "methods": {}}
         bm = {k: boot_means(v, W) for k, v in vals.items()}
         for i, m in enumerate(methods):
             res["methods"][m] = {k: {"mean": float(vals[k][i].mean()), **dict(zip(("lo", "hi"), ci(bm[k][i])))}
                                  for k in vals}
         comps = []
-        for a, b in COMPARISONS:
+        for a, b in COMPARISONS + EXPLORATORY:
             if a in methods and b in methods:
                 ia, ib = methods.index(a), methods.index(b)
                 d = vals["top1"][ia] - vals["top1"][ib]
                 lo, hi = ci(bm["top1"][ia] - bm["top1"][ib])
-                comps.append({"a": a, "b": b, "diff": float(d.mean()), "lo": lo, "hi": hi, "p": signflip_p(d, 5000, rng)})
+                comps.append({"a": a, "b": b, "diff": float(d.mean()), "lo": lo, "hi": hi, "p": signflip_p(d, 5000, rng),
+                              "planned": (a, b) in COMPARISONS})
         res["comparisons"] = comps
         out[key] = res
     return out
@@ -128,7 +138,7 @@ for phase in ("main", "poll", "ablate", "size"):
     df = derive(df)
     keep = ["phase", "kind", "n", "seed", "incident", "noise", "p_silent", "poll_interval", "root", "root_tier", "true_label",
             "triage_rule", "triage_tree", "n_alarms", "root_alarmed", "blast", "root_in_s0", "root_in_s2"]
-    keep += [c for c in df if c.startswith(("rank:", "stage:", "conf_", "top1_blast", "ms_", "size@", "feat:", "featctx:"))]
+    keep += [c for c in df if c.startswith(("rank:", "rankopt:", "stage:", "conf_", "top1_blast", "ms_", "size@", "feat:", "featctx:"))]
     if "jitter" in df:
         keep.append("jitter")
     df[keep].to_csv(f"results/{phase}_incidents.csv.gz", index=False, compression="gzip")
@@ -150,7 +160,7 @@ for phase in ("main", "poll", "ablate", "size"):
 
 # Holm over the planned family: per-topology comparisons of the main phase
 fam = [(k, c) for k in ("hierarchical", "star", "mesh", "hybrid") if k in summary["phases"].get("main", {})
-       for c in summary["phases"]["main"][k]["comparisons"]]
+       for c in summary["phases"]["main"][k]["comparisons"] if c["planned"]]
 for (k, c), ph in zip(fam, holm([c["p"] for _, c in fam])):
     c["p_holm"] = float(ph)
     c["significant"] = bool(ph < 0.05 and (c["lo"] > 0 or c["hi"] < 0))
