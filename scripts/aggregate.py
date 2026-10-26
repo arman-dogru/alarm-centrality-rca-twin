@@ -12,7 +12,10 @@
    incident-level sign-flip is kept only as a descriptive number). Holm over the 40 per-topology planned
    comparisons of the main phase. A comparison is significant only when Holm p < 0.05 AND the CI excludes 0.
 Outputs: results/<phase>_incidents.csv.gz (tidy per-incident ranks), results/summary.json, results/calibration.json
-Usage: python scripts/aggregate.py [--raw results/raw]
+Usage: python scripts/aggregate.py [--raw results/raw] [--allow-partial]
+The raw directory must hold the complete grid of rcatwin/grid.py (every twin x condition file of every phase);
+otherwise the script exits with status 2 and lists what is missing, so a half-finished run_grid.py can never
+overwrite results/summary.json. --allow-partial is for debugging only (the summary is then flagged "partial").
 """
 import argparse, glob, json, os, sys
 import numpy as np
@@ -21,7 +24,7 @@ from sklearn.tree import DecisionTreeClassifier, export_text
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
-from rcatwin.grid import DEV_SEEDS
+from rcatwin.grid import DEV_SEEDS, cond_id, phases
 from rcatwin.rca import expected_top1
 from rcatwin.stats import boot_means, ci, cluster_weights, holm, signflip_p, twin_signflip_p, twin_t_p
 from rcatwin.triage import LABELS, SELECT, classify
@@ -40,6 +43,39 @@ COMPARISONS = [("ppr", "static_pagerank"), ("alarm_degree", "static_degree"), ("
                ("triage_blog_weighted", "equal"), ("triage_blog_select", "equal"), ("triage_dev_select", "equal"),
                ("triage_tree_weighted", "equal"), ("alarm_degree", "equal")]
 EXPLORATORY = [("alarm_degree_tb", "alarm_degree")]  # added after the first look at the eval grid; not in the Holm family
+
+
+PHASES = ("dev", "main", "plink", "poll", "ablate", "size")
+
+
+def expected_files():
+    """{phase: set of raw file names} that run_grid.py writes for the grid in rcatwin/grid.py."""
+    return {ph: {f"{kind}_n{n}_s{seed}_{cond_id(c)}.csv.gz" for kind, n, seed, conds, _, _ in tasks for c in conds}
+            for ph, tasks in phases().items()}
+
+
+def check_grid(raw, phases_needed=PHASES):
+    """{phase: (missing file names, unexpected file names)} for every phase that is not exactly complete."""
+    out = {}
+    for ph, want in expected_files().items():
+        if ph not in phases_needed:
+            continue
+        d = os.path.join(raw, ph)
+        have = {f for f in os.listdir(d) if f.endswith(".csv.gz")} if os.path.isdir(d) else set()
+        if have != want:
+            out[ph] = (sorted(want - have), sorted(have - want))
+    return out
+
+
+def grid_problems_message(problems, raw):
+    lines = [f"aggregate.py: the raw grid in {raw} is incomplete (is run_grid.py still running?):"]
+    exp = expected_files()
+    for ph, (missing, extra) in problems.items():
+        lines.append(f"  {ph}: {len(exp[ph]) - len(missing)}/{len(exp[ph])} expected files present"
+                     + (f", {len(extra)} unexpected" if extra else "")
+                     + (f"; first missing: {missing[0]}" if missing else f"; first unexpected: {extra[0]}"))
+    lines.append("Wait for the grid to finish (or pass --allow-partial for a flagged debugging summary).")
+    return "\n".join(lines)
 
 
 def load(raw, phase):
@@ -175,7 +211,20 @@ def groups_for(phase, df):
     return [("all", df)] + [(k, g) for k, g in df.groupby("kind")]
 
 
-def main(raw):
+def holm_families(M):
+    """Holm families of the main phase (in place)."""
+    # primary family: 10 planned comparisons x 4 topologies (main phase); secondary family: the 10 pooled ones
+    apply_holm([c for k in ("hierarchical", "star", "mesh", "hybrid") if k in M
+                for c in M[k]["comparisons"] if c["planned"]])
+    apply_holm([c for c in M.get("all", {"comparisons": []})["comparisons"] if c["planned"]])
+
+
+def main(raw, allow_partial=False):
+    problems = check_grid(raw)
+    if problems:
+        print(grid_problems_message(problems, raw), file=sys.stderr)
+        if not allow_partial:
+            raise SystemExit(2)
     rng = np.random.default_rng(7)
     res = os.path.join(ROOT, "results")
     cal, tree = calibrate(load(raw, "dev"))
@@ -194,11 +243,9 @@ def main(raw):
         ms = METHODS + ([c[5:] for c in df if c.startswith("rank:") and "@" in c] if phase == "ablate" else [])
         summary["phases"][phase] = metrics(groups_for(phase, df), ms, rng)
         print(phase, len(df), "incidents", flush=True)
-    M = summary["phases"]["main"]
-    # primary family: 10 planned comparisons x 4 topologies (main phase); secondary family: the 10 pooled ones
-    apply_holm([c for k in ("hierarchical", "star", "mesh", "hybrid") if k in M
-                for c in M[k]["comparisons"] if c["planned"]])
-    apply_holm([c for c in M.get("all", {"comparisons": []})["comparisons"] if c["planned"]])
+    holm_families(summary["phases"].get("main", {}))
+    if problems:
+        summary["partial"] = {ph: {"missing": len(m), "unexpected": len(x)} for ph, (m, x) in problems.items()}
     json.dump(summary, open(os.path.join(res, "summary.json"), "w"), indent=1)
     print(json.dumps({k: v for k, v in cal.items() if k != "tree"}, indent=1))
 
@@ -206,4 +253,6 @@ def main(raw):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--raw", default=os.path.join(ROOT, "results", "raw"))
-    main(ap.parse_args().raw)
+    ap.add_argument("--allow-partial", action="store_true", help="debugging only: aggregate an incomplete grid")
+    a = ap.parse_args()
+    main(a.raw, a.allow_partial)

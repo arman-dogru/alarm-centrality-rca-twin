@@ -74,3 +74,10 @@ def test_pipeline_triage_rule_and_blog_reading():
     assert triage.SELECT == {"hierarchical": "ppr", "star": "alarm_degree", "mesh": "alarm_closeness"}
     assert triage.WEIGHTS["mesh"] == {"ppr": 0.2, "alarm_degree": 0.2, "alarm_closeness": 0.6}
     assert all(abs(sum(w.values()) - 1) < 1e-12 for w in triage.WEIGHTS.values())
+
+
+def test_twin_means_are_means_with_unequal_twins():
+    from rcatwin.stats import twin_means
+    d = np.array([1.0] * 10 + [-0.5, -0.5] + [0.2])
+    cl = np.array(["a"] * 10 + ["b", "b"] + ["c"])
+    assert np.allclose(twin_means(d, cl), [1.0, -0.5, 0.2])

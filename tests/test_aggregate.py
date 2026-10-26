@@ -61,7 +61,7 @@ def test_main_reads_only_dev_for_calibration(tmp_path, monkeypatch):
     monkeypatch.setattr(agg, "apply_holm", lambda comps: None)
     monkeypatch.setattr(agg, "METHODS", ["ppr", "alarm_degree", "equal"])
     monkeypatch.setattr(agg, "B", 20)
-    agg.main(str(tmp_path))
+    agg.main(str(tmp_path), allow_partial=True)  # partial on purpose: only the calibration path is under test
     assert seen == [[1]]
 
 
@@ -119,3 +119,81 @@ def test_metrics_bootstrap_is_twin_clustered():
     rows = [{"kind": "mesh", "seed": s, "rank:a": 1 if s < 5 else 2, "rankopt:a": 1 if s < 5 else 2} for s in range(10) for _ in range(100)]
     m = agg.metrics([("g", pd.DataFrame(rows))], ["a"], np.random.default_rng(0), B=400, comparisons=[])["g"]["methods"]["a"]["top1"]
     assert m["hi"] - m["lo"] > 0.4
+
+
+# ---- review round 2 (F2, F3): grid guard, twin ids, stratification, twin counts, Holm families -------------------
+def _two_topology_frame():
+    """Seeds 100/101 exist in BOTH topologies (so a seed-only twin id would merge them); unequal sizes across
+    topologies; within a topology every twin has the same size and the same outcome, so a topology-stratified
+    bootstrap has zero variance while a pooled one does not."""
+    rows = []
+    for kind, n, a in (("mesh", 10, 1), ("star", 30, 2)):
+        for s in (100, 101):
+            for i in range(n):
+                b = 1 if (kind == "mesh" and s == 100) else a  # mesh twin 100: a == b -> zero difference
+                rows.append({"kind": kind, "seed": s, "rank:a": a, "rankopt:a": a, "rank:b": b, "rankopt:b": b})
+    return pd.DataFrame(rows)
+
+
+def test_metrics_twin_id_is_kind_and_seed_and_pooled_bootstrap_is_stratified():
+    out = agg.metrics([("all", _two_topology_frame())], ["a", "b"], np.random.default_rng(0), B=300,
+                      comparisons=[("b", "a")])["all"]
+    assert out["twins"] == 4  # (mesh,100), (mesh,101), (star,100), (star,101)
+    m = out["methods"]["a"]["top1"]
+    assert m["mean"] == pytest.approx(20 / 80)
+    assert m["lo"] == pytest.approx(m["mean"]) and m["hi"] == pytest.approx(m["mean"])  # stratified: no spread
+    c = out["comparisons"][0]  # b == a in every row (the frame encodes b = 1 for mesh twin 100, which equals a there)
+    assert c["twins_pos"] + c["twins_neg"] < out["twins"]  # zero-difference twins are counted on neither side
+    assert c["twins_pos"] == 0 and c["twins_neg"] == 0
+
+
+def test_twins_pos_excludes_zero_twins():
+    df = _two_topology_frame()
+    df.loc[(df.kind == "star"), "rank:b"] = 1  # star twins: b right, a wrong -> b - a = +1
+    df["rankopt:b"] = df["rank:b"]
+    c = agg.metrics([("all", df)], ["a", "b"], np.random.default_rng(0), B=50, comparisons=[("b", "a")])["all"]["comparisons"][0]
+    assert (c["twins_pos"], c["twins_neg"]) == (2, 0)  # mesh twins: a == b == 1 -> zero, not positive
+
+
+def _comp(a, b, p, planned=True):
+    return {"a": a, "b": b, "p": p, "lo": 0.01, "hi": 0.1, "planned": planned}
+
+
+def test_holm_families_exclude_exploratory_and_have_ten_members():
+    M = {k: {"comparisons": [_comp(a, b, 0.004) for a, b in agg.COMPARISONS] + [_comp(*agg.EXPLORATORY[0], 1e-6, False)]}
+         for k in ("all", "hierarchical", "star", "mesh", "hybrid")}
+    agg.holm_families(M)
+    for k in M:
+        planned = [c for c in M[k]["comparisons"] if c["planned"]]
+        assert len(planned) == 10 and all("p_holm" in c for c in planned)
+        assert all("p_holm" not in c for c in M[k]["comparisons"] if not c["planned"])
+    assert M["all"]["comparisons"][0]["p_holm"] == pytest.approx(0.04)    # pooled family: 10 x 0.004
+    assert M["mesh"]["comparisons"][0]["p_holm"] == pytest.approx(0.16)   # topology family: 40 x 0.004
+
+
+def test_aggregate_refuses_an_incomplete_grid(tmp_path, monkeypatch, capsys):
+    os.makedirs(tmp_path / "dev"); os.makedirs(tmp_path / "main")
+    some = sorted(agg.expected_files()["main"])[0]
+    toy([100]).to_csv(tmp_path / "main" / some, index=False, compression="gzip")
+    monkeypatch.setattr(agg, "ROOT", str(tmp_path)); os.makedirs(tmp_path / "results")
+    with pytest.raises(SystemExit) as e:
+        agg.main(str(tmp_path))
+    assert e.value.code == 2
+    err = capsys.readouterr().err
+    assert "incomplete" in err and "main: 1/1440" in err and "dev: 0/240" in err
+    assert not os.path.exists(tmp_path / "results" / "summary.json")  # nothing overwritten
+
+
+def test_check_grid_complete_missing_and_unexpected(tmp_path):
+    exp = agg.expected_files()
+    assert {k: len(v) for k, v in exp.items()} == {"dev": 240, "main": 1440, "plink": 1200, "poll": 360, "ablate": 40, "size": 60}
+    for ph, names in exp.items():
+        os.makedirs(tmp_path / ph)
+        for f in names:
+            (tmp_path / ph / f).touch()
+    assert agg.check_grid(str(tmp_path)) == {}
+    gone = sorted(exp["plink"])[3]
+    os.remove(tmp_path / "plink" / gone)
+    (tmp_path / "size" / "mesh_n9_s1_bogus.csv.gz").touch()
+    prob = agg.check_grid(str(tmp_path))
+    assert prob == {"plink": ([gone], []), "size": ([], ["mesh_n9_s1_bogus.csv.gz"])}

@@ -1,6 +1,6 @@
 {
- "killed": 61,
- "total": 61,
+ "killed": 72,
+ "total": 72,
  "mutants": [
   {
    "file": "rcatwin/rca.py",
@@ -366,6 +366,72 @@
    "file": "scripts/aggregate.py",
    "mutant": "        W = cluster_weights(np.arange(len(g)), B, rng)",
    "breaks": "bootstrap ignores twins",
+   "killed": true
+  },
+  {
+   "file": "rcatwin/rca.py",
+   "mutant": "return int((s >= r).sum() + (1 if optimistic else 0))",
+   "breaks": "rank rewrite (not equivalent: breaks optimistic)",
+   "killed": true
+  },
+  {
+   "file": "rcatwin/stats.py",
+   "mutant": "    return np.bincount(inv, weights=d)",
+   "breaks": "twin_means returns sums",
+   "killed": true
+  },
+  {
+   "file": "scripts/aggregate.py",
+   "mutant": "        W = cluster_weights(twin, B, rng)",
+   "breaks": "pooled bootstrap unstratified",
+   "killed": true
+  },
+  {
+   "file": "scripts/aggregate.py",
+   "mutant": "        twin = g.seed.astype(str).to_numpy()",
+   "breaks": "twin id = seed only (merges topologies)",
+   "killed": true
+  },
+  {
+   "file": "scripts/aggregate.py",
+   "mutant": "\"twins_pos\": int((tm >= 0).sum())",
+   "breaks": "twins_pos counts zeros",
+   "killed": true
+  },
+  {
+   "file": "scripts/aggregate.py",
+   "mutant": "    apply_holm([c for c in M.get(\"all\", {\"comparisons\": []})[\"comparisons\"]])",
+   "breaks": "pooled Holm family includes exploratory",
+   "killed": true
+  },
+  {
+   "file": "rcatwin/experiment.py",
+   "mutant": "    agree = 0 if top is None else sum(int(np.argmax(trio_scores[k])) == top for k in TRIO)",
+   "breaks": "members' tied tops counted again",
+   "killed": true
+  },
+  {
+   "file": "rcatwin/grid.py",
+   "mutant": "EVAL_SEEDS = tuple(range(3, 33))",
+   "breaks": "eval seeds overlap dev",
+   "killed": true
+  },
+  {
+   "file": "rcatwin/grid.py",
+   "mutant": "P_LINK = (0.9, 0.9, 0.9, 0.9)",
+   "breaks": "p_link sweep collapsed",
+   "killed": true
+  },
+  {
+   "file": "scripts/aggregate.py",
+   "mutant": "        if not allow_partial:\n            pass",
+   "breaks": "aggregate accepts an incomplete grid",
+   "killed": true
+  },
+  {
+   "file": "scripts/aggregate.py",
+   "mutant": "        if not have:",
+   "breaks": "grid check only notices empty phases",
    "killed": true
   }
  ]

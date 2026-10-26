@@ -67,6 +67,18 @@ M = [  # (file, original, mutant, what it breaks)
     ("scripts/aggregate.py", '        df[f"{pre}:triage_blog_select"] = pick(df.triage_rule, lambda l: SELECT[l])', '        df[f"{pre}:triage_blog_select"] = pick(df.triage_rule, lambda l: "equal")', "blog select uses equal weights"),
     ("scripts/aggregate.py", '        df[f"{pre}:triage_dev_select"] = pick(df.triage_rule, lambda l: cal["dev_best_member"][l]["chosen"])', '        df[f"{pre}:triage_dev_select"] = pick(df.triage_rule, lambda l: SELECT[l])', "dev-tuned select uses the blog mapping"),
     ("scripts/aggregate.py", "        W = cluster_weights(twin, B, rng, strata=g.kind.to_numpy())", "        W = cluster_weights(np.arange(len(g)), B, rng)", "bootstrap ignores twins"),
+    # ---- review round 2 (F3): reviewer's surviving mutants + the rank rewrite once called equivalent ----
+    ("rcatwin/rca.py", "return int((s > r).sum() + (1 if optimistic else (s == r).sum()))", "return int((s >= r).sum() + (1 if optimistic else 0))", "rank rewrite (not equivalent: breaks optimistic)"),
+    ("rcatwin/stats.py", "    return np.bincount(inv, weights=d) / np.bincount(inv)", "    return np.bincount(inv, weights=d)", "twin_means returns sums"),
+    ("scripts/aggregate.py", "        W = cluster_weights(twin, B, rng, strata=g.kind.to_numpy())", "        W = cluster_weights(twin, B, rng)", "pooled bootstrap unstratified"),
+    ("scripts/aggregate.py", "        twin = (g.kind.astype(str) + \"|\" + g.seed.astype(str)).to_numpy()", "        twin = g.seed.astype(str).to_numpy()", "twin id = seed only (merges topologies)"),
+    ("scripts/aggregate.py", "\"twins_pos\": int((tm > 0).sum())", "\"twins_pos\": int((tm >= 0).sum())", "twins_pos counts zeros"),
+    ("scripts/aggregate.py", "    apply_holm([c for c in M.get(\"all\", {\"comparisons\": []})[\"comparisons\"] if c[\"planned\"]])", "    apply_holm([c for c in M.get(\"all\", {\"comparisons\": []})[\"comparisons\"]])", "pooled Holm family includes exploratory"),
+    ("rcatwin/experiment.py", "    agree = 0 if top is None else sum(unique_top(trio_scores[k]) == top for k in TRIO)", "    agree = 0 if top is None else sum(int(np.argmax(trio_scores[k])) == top for k in TRIO)", "members' tied tops counted again"),
+    ("rcatwin/grid.py", "EVAL_SEEDS = tuple(range(100, 130))", "EVAL_SEEDS = tuple(range(3, 33))", "eval seeds overlap dev"),
+    ("rcatwin/grid.py", "P_LINK = (0.3, 0.5, 0.7, 0.9)", "P_LINK = (0.9, 0.9, 0.9, 0.9)", "p_link sweep collapsed"),
+    ("scripts/aggregate.py", "        if not allow_partial:\n            raise SystemExit(2)", "        if not allow_partial:\n            pass", "aggregate accepts an incomplete grid"),
+    ("scripts/aggregate.py", "        if have != want:", "        if not have:", "grid check only notices empty phases"),
 ]
 
 

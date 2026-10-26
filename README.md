@@ -21,10 +21,17 @@ The main grid has 86,398 scored incidents on 120 eval twins (30 per topology), a
 conditions, with neighbour LINK_DOWN probability p_link = 0.9. A p_link sweep adds 47,841 incidents on the same
 120 twins.
 
-1. **Conditioning on alarms is what matters, and this holds under every alarm model I tried.** In every topology,
-   each alarm-conditioned centrality beats its static counterpart computed on the same cascade subgraph, by
-   +7.8 to +71.5 pp Top-1. The mean difference is positive in 30/30 twins for each of the 12 comparisons, and all
-   are significant under the twin-level test.
+1. **Conditioning on alarms beats static centrality almost everywhere, with two scoped exceptions.**
+   - Main grid (p_link 0.9), pooled over its 12 conditions: in every topology, each alarm-conditioned centrality
+     beats its static counterpart on the same cascade subgraph, by +7.8 to +71.5 pp Top-1. That holds in 30/30
+     twins for each of the 12 comparisons, and all are significant under the twin-level test.
+   - Per main-grid cell it holds in 83 of 84 topology x noise-level and topology x silent-rate cells. The
+     exception: in meshes with an always-silent root, PPR is 1.2 pp *below* static PageRank [-2.1, -0.4]
+     (7 twins up, 22 down).
+   - In the p_link sweep, PPR and alarm-degree beat their static counterparts in every topology x alarm-model x
+     silent-rate cell. The smallest gaps are +6.1 and +5.6 pp, and every CI excludes 0.
+   - **Alarm-closeness does not hold up in meshes under upstream-only LINK_DOWN.** It drops to +1.8 pp
+     [-0.4, +4.2] (17 twins up, 11 down), and to -1.8 pp [-4.6, +0.9] at silent 0.5 (9 up, 17 down).
 2. **Which alarm-conditioned score wins depends on the alarm model.**
    - When neighbours of a failed node reliably raise LINK_DOWN (p_link = 0.9, the main grid), plain
      **alarm-degree** is the best single method: 77.4% Top-1 overall [77.0, 77.9], against 65.1% for the
@@ -36,8 +43,12 @@ conditions, with neighbour LINK_DOWN probability p_link = 0.9. A p_link sweep ad
    - Alarm-degree's lead also needs **silent roots**. With an alarming root, it never beats equal weights in mesh
      or hybrid twins at any p_link. In the main grid at silent-root probability 0, the mesh numbers are 35.9%
      (alarm-degree), 35.0% (closeness) and 37.6% (equal). At silent-root probability 1 they are 78.7%, 12.8% and 19.6%.
-   - **The equal-weight trio is the robust choice.** Its pooled Top-1 stays at 64.9-66.1% across every p_link
-     and the upstream-only model.
+   - **The equal-weight trio is the most stable choice, not the best.** Its pooled Top-1 stays at 64.9-66.1%
+     across every p_link and the upstream-only model.
+     - Within every topology and alarm model, some other method beats it: the common ancestor or closeness in
+       hierarchical twins, earliest-in-cascade in meshes at p_link 0.3 and under upstream-only, and the common
+       ancestor in hybrid twins at low p_link.
+     - Pooled, it comes out on top only at p_link 0.5, and only narrowly (65.4% vs 64.9%).
 3. **My reading of the blog's topology mapping helps only a little, in meshes.**
    - The mapping is PPR for hierarchical, alarm-degree for star and closeness for mesh, with 0.6/0.2 weights.
      The post gives no hard mapping or weights, so these are my choices.
@@ -70,8 +81,8 @@ conditions, with neighbour LINK_DOWN probability p_link = 0.9. A p_link sweep ad
 
 > **Honest caveats.** I designed both the simulator and the methods. As the p_link sweep shows, the alarm model
 > can decide which centrality wins. So read the per-member ranking as conditional on the alarm model. The more
-> robust results are Finding 1 (conditioning beats static centralities everywhere) and the stability of the
-> equal-weight ensemble. Star-twin roots are almost always hubs, so star results are near-ceiling.
+> robust results are Finding 1 (conditioning beats static centralities, with the scoped exceptions listed there)
+> and the stability (not superiority) of the equal-weight ensemble. Star-twin roots are almost always hubs, so star results are near-ceiling.
 > See [Limitations](#limitations).
 
 ## Architecture
@@ -161,7 +172,7 @@ By default ties count against the root; the last column splits ties at random.
 
 ### Sensitivity to the neighbour-alarm model (review M1)
 
-![Two rows of four panels, one column per topology. Top row: Top-1 against p_link (0.3 to 0.9), plus hollow diamonds for the upstream-only model. In mesh and hybrid twins alarm-degree rises steeply with p_link, from 14% to 46% (mesh) and from 29% to 51% (hybrid), while equal weights stay flat at about 31-34% and 42-43%. The common ancestor leads in hierarchical twins at low p_link. Bottom row: alarm-degree minus equal weights in pp with 95% CIs, split by silent-root probability. For an alarming root (silent 0) the difference is negative in mesh and hybrid twins at every p_link. In mesh and hybrid twins it turns positive only for silent 0.5 at p_link >= 0.7, and the upstream-only model is negative there. Hierarchical and star differences stay within about ±3 pp.](docs/figures/plink_sensitivity.png)
+![Two rows of four panels, one column per topology. Top row: Top-1 against p_link (0.3 to 0.9), plus hollow diamonds for the upstream-only model. In mesh and hybrid twins alarm-degree rises steeply with p_link, from 14% to 46% (mesh) and from 29% to 51% (hybrid), while equal weights stay flat at about 31-34% and 42-43%. The common ancestor leads in hierarchical twins at low p_link. Bottom row: alarm-degree minus equal weights in pp with 95% CIs, split by silent-root probability. For an alarming root (silent 0) the difference is negative in mesh and hybrid twins at every p_link. In mesh and hybrid twins it is positive only for silent 0.5, and only from p_link 0.7 upward (+16.6 pp mesh, +10.2 pp hybrid). At p_link 0.5 it is within noise (mesh 0.0, hybrid +0.7 pp, both CIs spanning 0). The upstream-only model is negative there. Hierarchical and star differences stay within about ±3 pp.](docs/figures/plink_sensitivity.png)
 
 Data: [`results/plink_incidents.csv.gz`](results/plink_incidents.csv.gz) · grid: [`rcatwin/grid.py`](rcatwin/grid.py)
 (`plink` phase: noise 0.25, silent-root probability 0 and 0.5, 40 incidents per condition, seeds 100-129) ·
@@ -201,7 +212,7 @@ Top-1 (%), pooled over silent-root probability 0 and 0.5. The last column is the
 
 ### Planned comparisons (twin-level, Holm over 40 = 10 per topology)
 
-![Forest plot of the 10 planned paired Top-1 differences per topology, with 95% CIs and per-twin sign counts. Alarm-conditioned vs static centrality, and trio vs timing and upstream baselines, are large and positive everywhere. Blog-reading triage vs equal weights is negative in hierarchical and hybrid twins and slightly positive in mesh and star twins. Dev-tuned triage and alarm-degree vs equal weights are strongly positive in mesh and hybrid twins under the main grid's p_link 0.9.](docs/figures/comparisons_forest.png)
+![Forest plot of the 10 planned paired Top-1 differences per topology, with 95% CIs and per-twin sign counts. Alarm-conditioned vs static centrality, and trio vs timing and upstream baselines, are large and positive in every topology (main grid, pooled over conditions). Blog-reading triage vs equal weights is negative in hierarchical and hybrid twins and slightly positive in mesh and star twins. Dev-tuned triage and alarm-degree vs equal weights are strongly positive in mesh and hybrid twins under the main grid's p_link 0.9.](docs/figures/comparisons_forest.png)
 
 **Test.** The primary p is a two-sided sign-flip test on the 30 per-twin mean differences of each topology.
 Incidents within a twin are not independent, so they are not the unit of inference. It uses 20,000 Monte-Carlo
@@ -401,20 +412,23 @@ statistics. See [`docs/pilots.md`](docs/pilots.md) for the decisions made on dev
 
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt   # pinned; requirements-lock.txt = full freeze
-.venv/bin/python -m pytest -q                                              # 52 unit tests
-.venv/bin/python scripts/mutation_check.py                                 # 61 single-line mutants, all must be killed
+.venv/bin/python -m pytest -q                                              # unit tests (61)
+.venv/bin/python scripts/mutation_check.py                                 # 72 single-line mutants, all must be killed
 mkdir -p logs
 # results/raw is committed and run_grid.py skips existing files, so recompute into a scratch directory
 # (or pass --force to overwrite results/raw in place):
 nohup .venv/bin/python scripts/run_grid.py --phase dev main plink poll ablate size --workers 8 --out /tmp/rca_raw > logs/grid.log 2>&1 &
+wait   # the grid must finish first; aggregate.py refuses an incomplete raw dir (exit 2) and lists what is missing
 .venv/bin/python scripts/aggregate.py --raw /tmp/rca_raw          # writes results/*.json and *_incidents.csv.gz
 .venv/bin/python scripts/make_figures.py && .venv/bin/python scripts/readme_tables.py --write
 ```
 
-The full grid takes about 25 minutes on 8 CPU workers, and aggregation about 7 minutes. Each twin x condition is
+The full grid takes about 25-40 minutes on this 8-core CPU box: I measured about 25 min with 8 workers, and the
+reviewer measured about 37 min with 7. Aggregation takes about 7 minutes. Each twin x condition is
 written atomically, so an interrupted run resumes where it stopped. Randomness is seeded from
 `(seed, crc32(kind|n|condition), incident)`. A full rerun from scratch reproduces every committed raw file
-outside the `ms_*` timing columns. Scripts resolve paths from their own location, so they can run from any directory.
+outside the `ms_*` timing columns. The figures reproduce pixel-identically from the same results, except
+`docs/figures/size_scaling.png`: its left panel plots measured runtimes, so it changes from run to run. Scripts resolve paths from their own location, so they can run from any directory.
 
 **Quality gates:**
 - [`tests/`](tests) covers the generators, the impact and alarm model (including p_link and the upstream-only
@@ -422,9 +436,14 @@ outside the `ms_*` timing columns. Scripts resolve paths from their own location
   autonomy confidence, and the bootstrap, CI level, sign-flip and twin-level tests and Holm.
 - It also covers the aggregation path: dev-only calibration, the triage rule, the oracle, the blog-reading
   mapping and weights, and the significance rule.
-- [`scripts/mutation_check.py`](scripts/mutation_check.py) applies 61 single-line mutants, including the
+- It covers the twin-level statistics too: twin ids (kind, seed), topology-stratified pooled bootstrap,
+  twins_pos/neg with zero-difference twins, the pooled and per-topology Holm families, and twin means with
+  unequal twins. It also checks the grid-completeness guard, that dev and eval seeds are disjoint, and that the
+  p_link sweep stays a sweep.
+- [`scripts/mutation_check.py`](scripts/mutation_check.py) applies 72 single-line mutants, including the
   reviewer's, to `rcatwin/` and `scripts/aggregate.py`. Every one must make a test fail
-  ([`results/mutation_check.json`](results/mutation_check.json)).
+  ([`results/mutation_check.json`](results/mutation_check.json)). The mutants that cannot be killed because
+  they are true equivalents are listed with reasons in [`docs/mutation.md`](docs/mutation.md).
 
 ## Limitations
 
@@ -439,4 +458,4 @@ outside the `ms_*` timing columns. Scripts resolve paths from their own location
 - **Post-hoc metrics.** The ties-split metric and the closeness tie-break were added after the first eval pass.
   They are reported as secondary and exploratory. The pessimistic Top-1 stays primary.
 - **No LLM.** The "agent" is a rule plus a tree. That keeps it auditable and free, but it does not test LLM-based triage.
-- **No LICENSE.** Skipped while the repo is private; it needs one before going public.
+- **License:** MIT ([`LICENSE`](LICENSE)).

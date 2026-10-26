@@ -49,3 +49,11 @@ def test_global_pagerank_cache_is_per_twin():
     assert np.allclose(rca.global_pagerank(a), pa)
     g = nx.path_graph(5)  # no twin_id: computed fresh every time, never served from the cache
     assert len(rca.global_pagerank(g)) == 5 and len(rca.global_pagerank(nx.path_graph(7))) == 7
+
+
+def test_confidence_member_tie_that_includes_the_ensemble_top_does_not_count():
+    # alarm-degree ties nodes 1 and 2; np.argmax picks 1 == the ensemble's unique top, but a tie is not agreement
+    nodes = [0, 1, 2]
+    s = np.array([0.1, 0.9, 0.5])
+    trio = {"ppr": np.array([0.1, 0.8, 0.3]), "alarm_degree": np.array([0.0, 3.0, 3.0]), "alarm_closeness": np.array([0.0, 0.5, 0.4])}
+    assert confidence(s, nodes, trio)[1] == 2
