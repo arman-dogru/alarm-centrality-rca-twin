@@ -1,6 +1,6 @@
 {
- "killed": 77,
- "total": 77,
+ "killed": 79,
+ "total": 79,
  "mutants": [
   {
    "file": "rcatwin/rca.py",
@@ -312,6 +312,18 @@
    "file": "rcatwin/triage.py",
    "mutant": "SELECT = {\"hierarchical\": \"alarm_closeness\", \"star\": \"alarm_degree\", \"mesh\": \"ppr\"}",
    "breaks": "blog-reading mapping swapped",
+   "killed": true
+  },
+  {
+   "file": "scripts/aggregate.py",
+   "mutant": "compression=\"gzip\"",
+   "breaks": "incident csv.gz carries a timestamp",
+   "killed": true
+  },
+  {
+   "file": "scripts/make_figures.py",
+   "mutant": "    sys.exit(0)",
+   "breaks": "make_figures exits 0 on a partial summary",
    "killed": true
   },
   {

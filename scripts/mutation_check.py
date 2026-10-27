@@ -58,6 +58,8 @@ M = [  # (file, original, mutant, what it breaks)
     ("rcatwin/experiment.py", "    return top if int((s == s[top]).sum()) == 1 else None", "    return top", "gate agreement counts tied tops"),
     ("rcatwin/triage.py", "WEIGHTS = {lab: {k: (0.6 if k == SELECT[lab] else 0.2) for k in SELECT.values()} for lab in LABELS}", "WEIGHTS = {lab: {k: (0.2 if k == SELECT[lab] else 0.4) for k in SELECT.values()} for lab in LABELS}", "blog-reading weights inverted"),
     ("rcatwin/triage.py", 'SELECT = {"hierarchical": "ppr", "star": "alarm_degree", "mesh": "alarm_closeness"}', 'SELECT = {"hierarchical": "alarm_closeness", "star": "alarm_degree", "mesh": "ppr"}', "blog-reading mapping swapped"),
+    ("scripts/aggregate.py", 'compression={"method": "gzip", "mtime": 0}', 'compression="gzip"', "incident csv.gz carries a timestamp"),
+    ("scripts/make_figures.py", "    sys.exit(3)", "    sys.exit(0)", "make_figures exits 0 on a partial summary"),
     ("scripts/aggregate.py", "best = df[trio_r].to_numpy().argmin(1)", "best = df[trio_r].to_numpy().argmax(1)", "oracle picks the worst trio member"),
     ("scripts/aggregate.py", '    cal, tree = calibrate(load(raw, "dev"))', '    cal, tree = calibrate(load(raw, "main"))', "calibration on eval twins"),
     ("scripts/aggregate.py", "    if not set(dev.seed.unique()) <= set(DEV_SEEDS):", "    if False:", "calibration accepts eval seeds"),

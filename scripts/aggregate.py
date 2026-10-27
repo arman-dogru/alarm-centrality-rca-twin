@@ -49,6 +49,11 @@ EXPLORATORY = [("alarm_degree_tb", "alarm_degree")]  # added after the first loo
 PHASES = ("dev", "main", "plink", "poll", "ablate", "size")
 
 
+
+def write_csv_gz(df, path):
+    """gzip with mtime 0 so the same table always gives the same bytes."""
+    df.to_csv(path, index=False, compression={"method": "gzip", "mtime": 0})
+
 def expected_files():
     """{phase: set of raw file names} that run_grid.py writes for the grid in rcatwin/grid.py."""
     return {ph: {f"{kind}_n{n}_s{seed}_{cond_id(c)}.csv.gz" for kind, n, seed, conds, _, _ in tasks for c in conds}
@@ -249,7 +254,7 @@ def main(raw, allow_partial=False, out=None):
                 "triage_rule", "triage_tree", "n_alarms", "root_alarmed", "blast", "root_in_s0", "root_in_s2"]
         keep += [c for c in ("jitter", "p_link", "link_model") if c in df]
         keep += [c for c in df if c.startswith(("rank:", "rankopt:", "stage:", "conf_", "top1_blast", "ms_", "size@", "feat:", "featctx:"))]
-        df[[c for c in keep if c in df]].to_csv(os.path.join(res, f"{phase}_incidents.csv.gz"), index=False, compression="gzip")
+        write_csv_gz(df[[c for c in keep if c in df]], os.path.join(res, f"{phase}_incidents.csv.gz"))
         ms = METHODS + ([c[5:] for c in df if c.startswith("rank:") and "@" in c] if phase == "ablate" else [])
         summary["phases"][phase] = metrics(groups_for(phase, df), ms, rng)
         print(phase, len(df), "incidents", flush=True)

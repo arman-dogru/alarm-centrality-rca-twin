@@ -13,11 +13,13 @@ from rcatwin import rca, triage
 from rcatwin.faults import FaultParams, eligible_roots, simulate
 from rcatwin.twin import make_twin
 
-FIG = "docs/figures"; os.makedirs(FIG, exist_ok=True)
+FIG = "docs/figures"
 plt.rcParams.update({"font.size": 9, "axes.spines.top": False, "axes.spines.right": False})
-S = json.load(open("results/summary.json"))
+S = json.load(open(os.environ.get("RCA_SUMMARY", "results/summary.json")))
 if "partial" in S or not {"main", "plink", "poll", "ablate", "size"} <= set(S.get("phases", {})):
-    sys.exit("make_figures.py: refusing a partial or incomplete results/summary.json (re-run aggregate.py on the full grid)")
+    sys.stderr.write("make_figures.py: refusing a partial or incomplete results/summary.json (re-run aggregate.py on the full grid)\n")
+    sys.exit(3)
+os.makedirs(FIG, exist_ok=True)
 KINDS = ["hierarchical", "star", "mesh", "hybrid"]
 NAMES = {"random_candidate": "random (cascade candidates)", "global_pagerank": "global PageRank (static)",
          "earliest_alarm": "earliest alarm", "earliest_in_cascade": "earliest alarm in cascade",

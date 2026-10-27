@@ -248,3 +248,35 @@ def test_readme_tables_refuses_partial_or_incomplete_summary(tmp_path):
     assert r.returncode == 3 and "phases missing" in r.stderr and "plink" in r.stderr and "Traceback" not in r.stderr
     r = _run_tables(full, tmp_path)
     assert r.returncode == 0 and "## headline" in r.stdout
+
+
+def test_make_figures_refuses_partial_or_incomplete_summary(tmp_path):
+    full = json.load(open(os.path.join(os.path.dirname(__file__), "..", "results", "summary.json")))
+    script = os.path.join(os.path.dirname(__file__), "..", "scripts", "make_figures.py")
+    for bad in ({**full, "partial": {"main": {"missing": 3, "unexpected": 0}}}, {**full, "phases": {"main": full["phases"]["main"]}}):
+        p = tmp_path / "summary.json"; json.dump(bad, open(p, "w"))
+        r = subprocess.run([sys.executable, script], env={**os.environ, "RCA_SUMMARY": str(p)}, capture_output=True, text=True)
+        assert r.returncode == 3 and "refusing" in r.stderr and "Traceback" not in r.stderr
+
+
+def test_incident_csv_gz_is_byte_reproducible(tmp_path):
+    import gzip
+    for name in ("main", "plink", "poll", "ablate", "size"):
+        path = os.path.join(os.path.dirname(__file__), "..", "results", f"{name}_incidents.csv.gz")
+        if not os.path.exists(path):  # throw-away mutation copies carry only summary.json
+            pytest.skip("committed incident tables not present")
+        with open(path, "rb") as f:
+            head = f.read(10)
+        assert head[:2] == b"\x1f\x8b" and head[4:8] == b"\0\0\0\0", f"{name}: gzip header carries an mtime"
+
+
+def test_write_csv_gz_is_byte_reproducible(tmp_path):
+    import time
+    df = pd.DataFrame({"a": [1, 2, 3], "b": ["x", "y", "z"]})
+    (tmp_path / "1").mkdir(); (tmp_path / "2").mkdir()
+    agg.write_csv_gz(df, tmp_path / "1" / "t.csv.gz")
+    time.sleep(1.1)
+    agg.write_csv_gz(df, tmp_path / "2" / "t.csv.gz")
+    one, two = (tmp_path / "1" / "t.csv.gz").read_bytes(), (tmp_path / "2" / "t.csv.gz").read_bytes()
+    assert one == two and one[4:8] == b"\0\0\0\0"
+    assert pd.read_csv(tmp_path / "1" / "t.csv.gz").equals(df)
