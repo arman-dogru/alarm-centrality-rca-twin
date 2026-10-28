@@ -1,0 +1,70 @@
+{
+ "n_dev_incidents": 7200,
+ "dev_seeds": [
+  1,
+  2,
+  3,
+  4,
+  5
+ ],
+ "common_ancestor_frac": {
+  "dev_top1": {
+   "0.3": 0.5398611111111111,
+   "0.5": 0.5754166666666667,
+   "0.7": 0.40152777777777776,
+   "0.9": 0.15375
+  },
+  "chosen": "0.5"
+ },
+ "rule": {
+  "dev_balanced_acc": 0.9525977031074203,
+  "scope": "featctx",
+  "cycle_rank_mesh_min": 0.4,
+  "deg_cv_star_min": 2.6
+ },
+ "tree": {
+  "dev_balanced_acc": 0.9660776302659108,
+  "rules": "|--- featctx:deg_cv <= 2.61\n|   |--- featctx:clustering <= 0.20\n|   |   |--- featctx:depth <= 3.50\n|   |   |   |--- class: hierarchical\n|   |   |--- featctx:depth >  3.50\n|   |   |   |--- class: mesh\n|   |--- featctx:clustering >  0.20\n|   |   |--- feat:clustering <= 0.09\n|   |   |   |--- class: hierarchical\n|   |   |--- feat:clustering >  0.09\n|   |   |   |--- class: mesh\n|--- featctx:deg_cv >  2.61\n|   |--- feat:n <= 32.50\n|   |   |--- class: star\n|   |--- feat:n >  32.50\n|   |   |--- class: star\n"
+ },
+ "dev_best_member": {
+  "hierarchical": {
+   "chosen": "w_mesh",
+   "dev_top1": {
+    "ppr": 0.7405622489959839,
+    "alarm_degree": 0.8429718875502008,
+    "alarm_closeness": 0.8401606425702811,
+    "equal": 0.8048192771084337,
+    "w_hierarchical": 0.755421686746988,
+    "w_star": 0.8321285140562249,
+    "w_mesh": 0.8437751004016064
+   },
+   "n": 2490
+  },
+  "star": {
+   "chosen": "ppr",
+   "dev_top1": {
+    "ppr": 0.9907759088442757,
+    "alarm_degree": 0.9907759088442757,
+    "alarm_closeness": 0.9403147042864894,
+    "equal": 0.9864351600651112,
+    "w_hierarchical": 0.9886055344546935,
+    "w_star": 0.9886055344546935,
+    "w_mesh": 0.972327726532827
+   },
+   "n": 1843
+  },
+  "mesh": {
+   "chosen": "alarm_degree",
+   "dev_top1": {
+    "ppr": 0.1893965817928148,
+    "alarm_degree": 0.5657481688175794,
+    "alarm_closeness": 0.23020579002441577,
+    "equal": 0.288454830833624,
+    "w_hierarchical": 0.21695151726543424,
+    "w_star": 0.4332054412277642,
+    "w_mesh": 0.2947331705615626
+   },
+   "n": 2867
+  }
+ }
+}

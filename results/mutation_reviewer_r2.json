@@ -1,0 +1,212 @@
+[
+ {
+  "file": "rcatwin/rca.py",
+  "breaks": "R1 self term removed",
+  "killed": true
+ },
+ {
+  "file": "rcatwin/rca.py",
+  "breaks": "R1 self term dominates",
+  "killed": true
+ },
+ {
+  "file": "rcatwin/rca.py",
+  "breaks": "R1 rank rewrite (claimed equivalent; breaks optimistic)",
+  "killed": true
+ },
+ {
+  "file": "rcatwin/rca.py",
+  "breaks": "R1 closeness unreachable=0",
+  "killed": true
+ },
+ {
+  "file": "rcatwin/rca.py",
+  "breaks": "R1 Louvain least-alarmed first",
+  "killed": true
+ },
+ {
+  "file": "rcatwin/rca.py",
+  "breaks": "R1 pct ordinal",
+  "killed": true
+ },
+ {
+  "file": "rcatwin/rca.py",
+  "breaks": "R1 frontier not pruned (equivalent)",
+  "killed": false
+ },
+ {
+  "file": "rcatwin/rca.py",
+  "breaks": "R1 PR cache disabled (equivalent)",
+  "killed": false
+ },
+ {
+  "file": "rcatwin/stats.py",
+  "breaks": "R1 CI 80%",
+  "killed": true
+ },
+ {
+  "file": "rcatwin/stats.py",
+  "breaks": "R1 boot mean / N",
+  "killed": true
+ },
+ {
+  "file": "rcatwin/stats.py",
+  "breaks": "R1 sign-flip p can be 0",
+  "killed": true
+ },
+ {
+  "file": "rcatwin/stats.py",
+  "breaks": "R1 never resample clusters",
+  "killed": true
+ },
+ {
+  "file": "rcatwin/faults.py",
+  "breaks": "R1 p_link ignored",
+  "killed": true
+ },
+ {
+  "file": "rcatwin/faults.py",
+  "breaks": "R1 no pre-fault spurious",
+  "killed": true
+ },
+ {
+  "file": "rcatwin/faults.py",
+  "breaks": "R1 all degraded",
+  "killed": true
+ },
+ {
+  "file": "rcatwin/faults.py",
+  "breaks": "R1 p_degrade ignored",
+  "killed": true
+ },
+ {
+  "file": "rcatwin/faults.py",
+  "breaks": "R1 3x spurious",
+  "killed": true
+ },
+ {
+  "file": "rcatwin/faults.py",
+  "breaks": "R1 eligible threshold -1",
+  "killed": true
+ },
+ {
+  "file": "rcatwin/faults.py",
+  "breaks": "R1 UNREACHABLE depth ignored",
+  "killed": true
+ },
+ {
+  "file": "rcatwin/experiment.py",
+  "breaks": "R1 tie-break dominates",
+  "killed": true
+ },
+ {
+  "file": "rcatwin/experiment.py",
+  "breaks": "R1 headline rank optimistic",
+  "killed": true
+ },
+ {
+  "file": "rcatwin/experiment.py",
+  "breaks": "R1 gate top = argmin",
+  "killed": true
+ },
+ {
+  "file": "rcatwin/triage.py",
+  "breaks": "R1 blog weights inverted",
+  "killed": true
+ },
+ {
+  "file": "rcatwin/triage.py",
+  "breaks": "R1 blog mapping swapped",
+  "killed": true
+ },
+ {
+  "file": "scripts/aggregate.py",
+  "breaks": "R1 oracle worst",
+  "killed": true
+ },
+ {
+  "file": "rcatwin/triage.py",
+  "breaks": "R1 real rule swaps mesh/star",
+  "killed": true
+ },
+ {
+  "file": "scripts/aggregate.py",
+  "breaks": "R1 calibration on eval",
+  "killed": true
+ },
+ {
+  "file": "scripts/aggregate.py",
+  "breaks": "R1 significance ignores CI",
+  "killed": true
+ },
+ {
+  "file": "rcatwin/stats.py",
+  "breaks": "N exact branch disabled (MC always)",
+  "killed": true
+ },
+ {
+  "file": "rcatwin/stats.py",
+  "breaks": "N exact sign-flip strict inequality",
+  "killed": true
+ },
+ {
+  "file": "rcatwin/stats.py",
+  "breaks": "N twin_means returns sums",
+  "killed": true
+ },
+ {
+  "file": "scripts/aggregate.py",
+  "breaks": "N pooled bootstrap unstratified",
+  "killed": true
+ },
+ {
+  "file": "scripts/aggregate.py",
+  "breaks": "N twin id = seed only (merges topologies)",
+  "killed": true
+ },
+ {
+  "file": "scripts/aggregate.py",
+  "breaks": "N twins_pos counts zeros",
+  "killed": true
+ },
+ {
+  "file": "scripts/aggregate.py",
+  "breaks": "N guard only needs one dev seed",
+  "killed": true
+ },
+ {
+  "file": "scripts/aggregate.py",
+  "breaks": "N pooled family includes exploratory",
+  "killed": true
+ },
+ {
+  "file": "rcatwin/faults.py",
+  "breaks": "N upstream model uses downstream",
+  "killed": true
+ },
+ {
+  "file": "rcatwin/faults.py",
+  "breaks": "N upstream model ignored",
+  "killed": true
+ },
+ {
+  "file": "rcatwin/experiment.py",
+  "breaks": "N members' tied tops counted again",
+  "killed": true
+ },
+ {
+  "file": "rcatwin/rca.py",
+  "breaks": "N graphs without twin_id cached under None",
+  "killed": false
+ },
+ {
+  "file": "rcatwin/grid.py",
+  "breaks": "N eval seeds overlap dev",
+  "killed": true
+ },
+ {
+  "file": "rcatwin/grid.py",
+  "breaks": "N p_link sweep collapsed",
+  "killed": true
+ }
+]
