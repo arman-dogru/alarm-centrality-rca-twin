@@ -15,9 +15,10 @@ from rcatwin.twin import make_twin
 
 FIG = "docs/figures"
 plt.rcParams.update({"font.size": 9, "axes.spines.top": False, "axes.spines.right": False})
-S = json.load(open(os.environ.get("RCA_SUMMARY", "results/summary.json")))
+SUMMARY = os.environ.get("RCA_SUMMARY", "results/summary.json")
+S = json.load(open(SUMMARY))
 if "partial" in S or not {"main", "plink", "poll", "ablate", "size"} <= set(S.get("phases", {})):
-    sys.stderr.write("make_figures.py: refusing a partial or incomplete results/summary.json (re-run aggregate.py on the full grid)\n")
+    sys.stderr.write(f"make_figures.py: refusing a partial or incomplete {SUMMARY} (re-run aggregate.py on the full grid)\n")
     sys.exit(3)
 os.makedirs(FIG, exist_ok=True)
 KINDS = ["hierarchical", "star", "mesh", "hybrid"]

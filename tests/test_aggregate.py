@@ -256,7 +256,7 @@ def test_make_figures_refuses_partial_or_incomplete_summary(tmp_path):
     for bad in ({**full, "partial": {"main": {"missing": 3, "unexpected": 0}}}, {**full, "phases": {"main": full["phases"]["main"]}}):
         p = tmp_path / "summary.json"; json.dump(bad, open(p, "w"))
         r = subprocess.run([sys.executable, script], env={**os.environ, "RCA_SUMMARY": str(p)}, capture_output=True, text=True)
-        assert r.returncode == 3 and "refusing" in r.stderr and "Traceback" not in r.stderr
+        assert r.returncode == 3 and "refusing" in r.stderr and str(p) in r.stderr and "Traceback" not in r.stderr
 
 
 def test_incident_csv_gz_is_byte_reproducible(tmp_path):

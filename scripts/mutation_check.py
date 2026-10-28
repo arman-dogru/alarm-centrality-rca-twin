@@ -1,6 +1,8 @@
-"""Single-line mutation check: each mutant is applied to a throw-away copy of rcatwin/ and tests/ (the working
-tree is never touched) and `pytest -x tests` must fail. Writes results/mutation_check.json; exit 1 if any
-mutant survives. Extra arguments go to pytest (then nothing is written)."""
+"""Single-line mutation check. An unmutated control copy runs first and must pass. Then each mutant is applied to a
+throw-away copy of rcatwin/, scripts/ and tests/ (the working tree is never touched) and `pytest -x tests` must
+fail tests: only exit code 1 counts as killed; any other exit code is reported as ERROR. Writes
+results/mutation_check.json (with the control); exit 1 if the control fails or any mutant is not killed. Extra
+arguments go to pytest (then nothing is written)."""
 import json, os, shutil, subprocess, sys, tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -60,6 +62,7 @@ M = [  # (file, original, mutant, what it breaks)
     ("rcatwin/triage.py", 'SELECT = {"hierarchical": "ppr", "star": "alarm_degree", "mesh": "alarm_closeness"}', 'SELECT = {"hierarchical": "alarm_closeness", "star": "alarm_degree", "mesh": "ppr"}', "blog-reading mapping swapped"),
     ("scripts/aggregate.py", 'compression={"method": "gzip", "mtime": 0}', 'compression="gzip"', "incident csv.gz carries a timestamp"),
     ("scripts/make_figures.py", "    sys.exit(3)", "    sys.exit(0)", "make_figures exits 0 on a partial summary"),
+    ("scripts/make_figures.py", "refusing a partial or incomplete {SUMMARY}", "refusing a partial or incomplete results/summary.json", "make_figures names the wrong summary path"),
     ("scripts/aggregate.py", "best = df[trio_r].to_numpy().argmin(1)", "best = df[trio_r].to_numpy().argmax(1)", "oracle picks the worst trio member"),
     ("scripts/aggregate.py", '    cal, tree = calibrate(load(raw, "dev"))', '    cal, tree = calibrate(load(raw, "main"))', "calibration on eval twins"),
     ("scripts/aggregate.py", "    if not set(dev.seed.unique()) <= set(DEV_SEEDS):", "    if False:", "calibration accepts eval seeds"),
@@ -90,29 +93,47 @@ M = [  # (file, original, mutant, what it breaks)
 ]
 
 
-def main():
-    res = []
-    for f, old, new, what in M:
-        tmp = tempfile.mkdtemp(prefix="mut_")
-        try:
-            for d in ("rcatwin", "tests", "scripts"):
-                shutil.copytree(os.path.join(ROOT, d), os.path.join(tmp, d), ignore=shutil.ignore_patterns("__pycache__"))
-            os.makedirs(os.path.join(tmp, "results"))  # the readme_tables test renders the committed summary
-            shutil.copy(os.path.join(ROOT, "results", "summary.json"), os.path.join(tmp, "results", "summary.json"))
+def run(edit=None):
+    """pytest on a throw-away copy, optionally with one (file, old, new) edit applied. Returns the CompletedProcess."""
+    tmp = tempfile.mkdtemp(prefix="mut_")
+    try:
+        for d in ("rcatwin", "tests", "scripts"):
+            shutil.copytree(os.path.join(ROOT, d), os.path.join(tmp, d), ignore=shutil.ignore_patterns("__pycache__"))
+        os.makedirs(os.path.join(tmp, "results"))  # the readme_tables / make_figures tests read the committed summary
+        shutil.copy(os.path.join(ROOT, "results", "summary.json"), os.path.join(tmp, "results", "summary.json"))
+        if edit:
+            f, old, new = edit
             p = os.path.join(tmp, f); src = open(p).read()
             assert src.count(old) == 1, f"{f}: mutation site not unique/found: {old}"
             open(p, "w").write(src.replace(old, new))
-            r = subprocess.run([sys.executable, "-m", "pytest", "-q", "-x", "-p", "no:cacheprovider", *sys.argv[1:], "tests"],
-                               cwd=tmp, env={**os.environ, "PYTHONPATH": tmp}, capture_output=True, text=True)
-            killed = r.returncode != 0
-        finally:
-            shutil.rmtree(tmp)
-        res.append(dict(file=f, mutant=new, breaks=what, killed=killed))
-        print("KILLED  " if killed else "SURVIVED", f, "-", what, flush=True)
+        return subprocess.run([sys.executable, "-m", "pytest", "-q", "-x", "-p", "no:cacheprovider", *sys.argv[1:], "tests"],
+                              cwd=tmp, env={**os.environ, "PYTHONPATH": tmp}, capture_output=True, text=True)
+    finally:
+        shutil.rmtree(tmp)
+
+
+def _last(r):
+    lines = [l.strip() for l in r.stdout.splitlines() if " passed" in l or " failed" in l]
+    return lines[-1] if lines else ""
+
+
+def main():
+    ctl = run()
+    print(f"control (unmutated copy): exit {ctl.returncode} :: {_last(ctl)}", flush=True)
+    if ctl.returncode != 0:
+        print("control run failed - mutation results would be meaningless")
+        sys.exit(1)
+    res = []
+    for f, old, new, what in M:
+        r = run((f, old, new))
+        status = {0: "SURVIVED", 1: "killed"}.get(r.returncode, "ERROR")  # only failing tests (exit 1) count as a kill
+        res.append(dict(file=f, mutant=new, breaks=what, status=status, exit=r.returncode, killed=status == "killed"))
+        print(f"{status:8s}", f, "-", what, flush=True)
     n = sum(r["killed"] for r in res)
     print(f"{n}/{len(res)} mutants killed")
     if not sys.argv[1:]:
-        json.dump({"killed": n, "total": len(res), "mutants": res}, open(os.path.join(ROOT, "results/mutation_check.json"), "w"), indent=1)
+        json.dump({"control": {"exit": ctl.returncode, "summary": _last(ctl)}, "killed": n, "total": len(res), "mutants": res},
+                  open(os.path.join(ROOT, "results/mutation_check.json"), "w"), indent=1)
     sys.exit(0 if n == len(res) else 1)
 
 

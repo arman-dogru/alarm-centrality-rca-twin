@@ -413,7 +413,7 @@ statistics. See [`docs/pilots.md`](docs/pilots.md) for the decisions made on dev
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt   # pinned; requirements-lock.txt = full freeze
 .venv/bin/python -m pytest -q                                              # unit tests (67)
-.venv/bin/python scripts/mutation_check.py                                 # 79 single-line mutants, all must be killed
+.venv/bin/python scripts/mutation_check.py                                 # control + 80 single-line mutants, all must be killed
 mkdir -p logs
 # results/raw is committed and run_grid.py skips existing files, so recompute into a scratch directory
 # (or pass --force to overwrite results/raw in place):
@@ -445,9 +445,11 @@ refuse a partial or incomplete summary (readme_tables exits with status 3).
   unequal twins. It also checks the grid-completeness guard, that dev and eval seeds are disjoint, and that the
   p_link sweep stays a sweep. `readme_tables.py` and `make_figures.py` both refuse a partial or incomplete
   summary with exit 3, and the incident tables are gzipped with mtime 0, so re-aggregating gives identical bytes.
-- [`scripts/mutation_check.py`](scripts/mutation_check.py) applies 79 single-line mutants, including the
-  reviewer's, to `rcatwin/`, `scripts/aggregate.py`, `readme_tables.py` and `make_figures.py`. Every one must make a test fail
-  ([`results/mutation_check.json`](results/mutation_check.json)). The mutants that cannot be killed because
+- [`scripts/mutation_check.py`](scripts/mutation_check.py) first runs an unmutated control copy (must pass), then
+  applies 80 single-line mutants, including the reviewer's, to `rcatwin/`, `scripts/aggregate.py`,
+  `readme_tables.py` and `make_figures.py`. A mutant counts as killed only when pytest exits 1 (failing tests); any
+  other exit code is reported as an error ([`results/mutation_check.json`](results/mutation_check.json), with the
+  control). The mutants that cannot be killed because
   they are true equivalents are listed with reasons in [`docs/mutation.md`](docs/mutation.md).
 
 ## Limitations

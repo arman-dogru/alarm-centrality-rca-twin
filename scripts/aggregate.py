@@ -49,10 +49,10 @@ EXPLORATORY = [("alarm_degree_tb", "alarm_degree")]  # added after the first loo
 PHASES = ("dev", "main", "plink", "poll", "ablate", "size")
 
 
-
 def write_csv_gz(df, path):
     """gzip with mtime 0 so the same table always gives the same bytes."""
     df.to_csv(path, index=False, compression={"method": "gzip", "mtime": 0})
+
 
 def expected_files():
     """{phase: set of raw file names} that run_grid.py writes for the grid in rcatwin/grid.py."""

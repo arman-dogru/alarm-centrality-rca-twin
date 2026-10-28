@@ -1,479 +1,649 @@
 {
- "killed": 79,
- "total": 79,
+ "control": {
+  "exit": 0,
+  "summary": "66 passed, 1 skipped in 7.22s"
+ },
+ "killed": 80,
+ "total": 80,
  "mutants": [
   {
    "file": "rcatwin/rca.py",
    "mutant": "(1 if optimistic else 1)",
    "breaks": "pessimistic rank breaks ties for the root",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/rca.py",
    "mutant": "((s == r).sum() if optimistic else (s == r).sum())",
    "breaks": "optimistic rank counts ties against the root",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/rca.py",
    "mutant": "return (np.asarray(pess) == 1) / (np.asarray(pess) - np.asarray(opt) + 1.0)",
    "breaks": "ties-split Top-1 uses the pessimistic rank",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/rca.py",
    "mutant": "        return 1\n",
    "breaks": "unrankable root counted as a hit",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/rca.py",
    "mutant": "x_new = alpha * (W @ x + dangling * p) + (1 - alpha) * p",
    "breaks": "PPR transition transposed",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/rca.py",
    "mutant": "x_new = alpha * (W.T @ x + dangling * p) + (1 - alpha) / len(p)",
    "breaks": "PPR restarts uniformly (not alarm-seeded)",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/rca.py",
    "mutant": "deg = np.asarray(M.sum(1)).ravel() + 0.5 * is_alarm",
    "breaks": "alarm-degree counts every edge",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/rca.py",
    "mutant": "close = 1.0 / (1.0 + D.min(0))\n    else:",
    "breaks": "alarm-closeness uses the nearest alarm only",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/rca.py",
    "mutant": "keep = comps",
    "breaks": "decomposition keeps every component",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/rca.py",
    "mutant": "            if got >= 0:\n                break",
    "breaks": "clustering keeps one community only",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/rca.py",
    "mutant": "if L[v] == L[u] + 1 and v not in seen:",
    "breaks": "common ancestor walks downstream",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/rca.py",
    "mutant": "ok = c >= c.max()",
    "breaks": "common ancestor ignores frac",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/rca.py",
    "mutant": "return _full(ctx.n, ctx.A, ctx.t)",
    "breaks": "earliest alarm picks the latest",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/rca.py",
    "mutant": "out[nodes] = v",
    "breaks": "ensemble mixes raw score scales",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/faults.py",
    "mutant": "disc = {v for v in others if v in L1}",
    "breaks": "blast radius inverted",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/faults.py",
    "mutant": "if rng.random() >= 0:",
    "breaks": "root never alarms",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/faults.py",
    "mutant": "emit(v, _deliver(G, v, rng, P, trap_ok=False, extra=-P.hop_latency * hops), \"UNREACHABLE\")",
    "breaks": "effects before cause",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/faults.py",
    "mutant": "nxt = phase + P.poll_interval * np.floor((t - phase) / P.poll_interval)",
    "breaks": "poll before the event",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/faults.py",
    "mutant": "if len(disc) >= min_blast:",
    "breaks": "eligible roots need disconnection",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/twin.py",
    "mutant": "if L[v] == L[u] + 1)",
    "breaks": "upstream graph points downstream",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/stats.py",
    "mutant": "np.add.at(W[b], rng.integers(0, len(clusters), len(m)), 1)",
    "breaks": "bootstrap ignores clusters",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/stats.py",
    "mutant": "null >= obs - 1e-12",
    "breaks": "one-sided sign-flip",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/stats.py",
    "mutant": "run = min(1.0, (k - r) * p[i])",
    "breaks": "Holm not monotone",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/triage.py",
    "mutant": "\"cycle_rank\": (m - n) / max(1, n)",
    "breaks": "cycle rank ignores components",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/triage.py",
    "mutant": "np.where(cyc >= cycle_mesh_min, \"star\", np.where(cv >= deg_cv_star_min, \"mesh\", \"hierarchical\"))",
    "breaks": "pipeline triage rule swaps mesh/star",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/rca.py",
    "mutant": "deg = M @ is_alarm + 0.0 * is_alarm",
    "breaks": "alarm-degree drops the self-alarm term",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/rca.py",
    "mutant": "deg = M @ is_alarm + 5.0 * is_alarm",
    "breaks": "self-alarm dominates alarm-degree",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/rca.py",
    "mutant": "D[np.isinf(D)] = 0\n        close",
    "breaks": "alarm-closeness: unreachable alarms at distance 0",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/rca.py",
    "mutant": "comms = sorted(comms, key=lambda m: (len(m & Aset), -len(m), min(m)))",
    "breaks": "Louvain keeps the least-alarmed communities first",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/rca.py",
    "mutant": "out[nodes] = (rankdata(v, method='ordinal') - 1) / max(1, len(v) - 1)",
    "breaks": "percentile ties broken by node index",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/rca.py",
    "mutant": "    key = id(G)",
    "breaks": "global PR cache keyed by id(G) (review m4)",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/stats.py",
    "mutant": "def ci(boot, lo=10, hi=90):",
    "breaks": "CI is 80% not 95%",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/stats.py",
    "mutant": "return (np.asarray(X, np.float64) @ W.T.astype(np.float64)) / W.shape[1]",
    "breaks": "bootstrap mean divides by N",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/stats.py",
    "mutant": "return float(np.sum(np.abs(null) >= abs(obs) - 1e-12) / flips)",
    "breaks": "sign-flip p can be 0",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/stats.py",
    "mutant": "for k in range(len(members)):",
    "breaks": "bootstrap never resamples clusters",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/stats.py",
    "mutant": "        groups.append([np.flatnonzero(clusters == c) for c in np.unique(clusters)])",
    "breaks": "stratified bootstrap ignores strata",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/stats.py",
    "mutant": "    m = np.asarray(d, float)\n    if not np.any(m):",
    "breaks": "twin-level test runs on incidents",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/stats.py",
    "mutant": "    return float(_st.ttest_1samp(np.asarray(d, float), 0.0).pvalue)",
    "breaks": "twin t-test runs on incidents",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/faults.py",
    "mutant": "if rng.random() < 1.0 and",
    "breaks": "p_link ignored",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/faults.py",
    "mutant": "(P.link_model == \"all\" or L0[u] <= L0[root])",
    "breaks": "upstream model admits same-layer peers",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/faults.py",
    "mutant": "emit(int(v), float(rng.uniform(0, 300)), \"SPURIOUS\")",
    "breaks": "no pre-fault spurious alarms",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/faults.py",
    "mutant": "deg = {v for v in others if v in L1 and L1[v] >= L0[v]}",
    "breaks": "every reachable node is degraded",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/faults.py",
    "mutant": "if rng.random() < 1.0:",
    "breaks": "p_degrade ignored",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/faults.py",
    "mutant": "rng.poisson(P.noise * max(1, len(true)) * 3)",
    "breaks": "3x spurious rate",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/faults.py",
    "mutant": "if len(set(G.neighbors(v)) | disc) >= min_blast - 1:",
    "breaks": "eligible-root threshold off by one",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/faults.py",
    "mutant": "            hops = 1",
    "breaks": "UNREACHABLE delay ignores depth",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/experiment.py",
    "mutant": "S[\"alarm_degree_tb\"] = tr[\"alarm_degree\"] + 1e3 * rca.pct(tr[\"alarm_closeness\"], nodes)",
    "breaks": "tie-break dominates alarm-degree",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/experiment.py",
    "mutant": "        out[f\"rank:{k}\"] = rca.rank_of(s, root, optimistic=True)",
    "breaks": "headline rank becomes optimistic",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/experiment.py",
    "mutant": "    top = int(np.argmin(s))\n    return top if",
    "breaks": "autonomy gate top-1 is the worst node",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/experiment.py",
    "mutant": "    return top",
    "breaks": "gate agreement counts tied tops",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/triage.py",
    "mutant": "WEIGHTS = {lab: {k: (0.2 if k == SELECT[lab] else 0.4) for k in SELECT.values()} for lab in LABELS}",
    "breaks": "blog-reading weights inverted",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/triage.py",
    "mutant": "SELECT = {\"hierarchical\": \"alarm_closeness\", \"star\": \"alarm_degree\", \"mesh\": \"ppr\"}",
    "breaks": "blog-reading mapping swapped",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "scripts/aggregate.py",
    "mutant": "compression=\"gzip\"",
    "breaks": "incident csv.gz carries a timestamp",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "scripts/make_figures.py",
    "mutant": "    sys.exit(0)",
    "breaks": "make_figures exits 0 on a partial summary",
+   "status": "killed",
+   "exit": 1,
+   "killed": true
+  },
+  {
+   "file": "scripts/make_figures.py",
+   "mutant": "refusing a partial or incomplete results/summary.json",
+   "breaks": "make_figures names the wrong summary path",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "scripts/aggregate.py",
    "mutant": "best = df[trio_r].to_numpy().argmax(1)",
    "breaks": "oracle picks the worst trio member",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "scripts/aggregate.py",
    "mutant": "    cal, tree = calibrate(load(raw, \"main\"))",
    "breaks": "calibration on eval twins",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "scripts/aggregate.py",
    "mutant": "    if False:",
    "breaks": "calibration accepts eval seeds",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "scripts/aggregate.py",
    "mutant": "    return bool(c[\"p_holm\"] < 0.05)",
    "breaks": "significance ignores the CI",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "scripts/aggregate.py",
    "mutant": "    for c, ph in zip(comps, [c[\"p\"] for c in comps]):",
    "breaks": "no Holm correction",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "scripts/aggregate.py",
    "mutant": "                              \"p\": signflip_p(d, 5000, rng), \"p_t\": twin_t_p(d, twin),",
    "breaks": "primary test back to incident level",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "scripts/aggregate.py",
    "mutant": "        df[f\"{pre}:triage_blog_select\"] = pick(df.triage_rule, lambda l: \"equal\")",
    "breaks": "blog select uses equal weights",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "scripts/aggregate.py",
    "mutant": "        df[f\"{pre}:triage_dev_select\"] = pick(df.triage_rule, lambda l: SELECT[l])",
    "breaks": "dev-tuned select uses the blog mapping",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "scripts/aggregate.py",
    "mutant": "        W = cluster_weights(np.arange(len(g)), B, rng)",
    "breaks": "bootstrap ignores twins",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/rca.py",
    "mutant": "return int((s >= r).sum() + (1 if optimistic else 0))",
    "breaks": "rank rewrite (not equivalent: breaks optimistic)",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/stats.py",
    "mutant": "    return np.bincount(inv, weights=d)",
    "breaks": "twin_means returns sums",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "scripts/aggregate.py",
    "mutant": "        W = cluster_weights(twin, B, rng)",
    "breaks": "pooled bootstrap unstratified",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "scripts/aggregate.py",
    "mutant": "        twin = g.seed.astype(str).to_numpy()",
    "breaks": "twin id = seed only (merges topologies)",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "scripts/aggregate.py",
    "mutant": "\"twins_pos\": int((tm >= 0).sum())",
    "breaks": "twins_pos counts zeros",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "scripts/aggregate.py",
    "mutant": "    apply_holm([c for c in M.get(\"all\", {\"comparisons\": []})[\"comparisons\"]])",
    "breaks": "pooled Holm family includes exploratory",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/experiment.py",
    "mutant": "    agree = 0 if top is None else sum(int(np.argmax(trio_scores[k])) == top for k in TRIO)",
    "breaks": "members' tied tops counted again",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/grid.py",
    "mutant": "EVAL_SEEDS = tuple(range(3, 33))",
    "breaks": "eval seeds overlap dev",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "rcatwin/grid.py",
    "mutant": "P_LINK = (0.9, 0.9, 0.9, 0.9)",
    "breaks": "p_link sweep collapsed",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "scripts/aggregate.py",
    "mutant": "        if not allow_partial:\n            pass",
    "breaks": "aggregate accepts an incomplete grid",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "scripts/aggregate.py",
    "mutant": "        if not have:",
    "breaks": "grid check only notices empty phases",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "scripts/aggregate.py",
    "mutant": "    if False:",
    "breaks": "--allow-partial may run without a scratch --out",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "scripts/aggregate.py",
    "mutant": "    res = os.path.join(ROOT, \"results\")",
    "breaks": "--allow-partial writes into committed results/",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "scripts/aggregate.py",
    "mutant": "    missing_any = True",
    "breaks": "extra files reported as an incomplete grid",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "scripts/readme_tables.py",
    "mutant": "        pass",
    "breaks": "readme_tables renders (crashes on) a bad summary",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   },
   {
    "file": "scripts/readme_tables.py",
    "mutant": "    if False:",
    "breaks": "readme_tables ignores the partial flag",
+   "status": "killed",
+   "exit": 1,
    "killed": true
   }
  ]
